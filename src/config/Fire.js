@@ -8,9 +8,8 @@ import firebase from 'firebase';
     storageBucket: "projects-ebb91.appspot.com",
     messagingSenderId: "1008240443638"
   };
-    export const fire = firebase.initializeApp(config)
-  
-    export const ref = firebase.database().ref()
+
+    firebase.initializeApp(config)
     export const auth = firebase.auth
     export const provider = new firebase.auth.FacebookAuthProvider();
-    export default fire;
+    export default firebase;

@@ -1,6 +1,15 @@
 import React, { Component } from 'react';
-import fire from './config/Fire';
+import firebase from './config/Fire';
 import {provider,auth} from './config/Fire';
+
+const loginStyles = {
+    width: "90%",
+    maxWidth: "500px",
+    margin: "20px auto",
+    border: "1px solid #ddd",
+    borderRadius : "5px",
+    padding: "10px"
+}
 
 class Login extends Component {
   constructor(props) {
@@ -15,6 +24,8 @@ class Login extends Component {
     };
   }
 
+  
+
   handleChange(e) {
     this.setState({ [e.target.name]: e.target.value });
   }
@@ -22,7 +33,7 @@ class Login extends Component {
 
   login(e) {
     e.preventDefault();
-    fire.auth().signInWithEmailAndPassword(this.state.email, this.state.password).then((u)=>{
+    firebase.auth().signInWithEmailAndPassword(this.state.email, this.state.password).then((u)=>{
     }).catch((error) => {
         console.log(error);
       });
@@ -30,7 +41,7 @@ class Login extends Component {
 
   signup(e){
     e.preventDefault();
-    fire.auth().createUserWithEmailAndPassword(this.state.email, this.state.password)
+    firebase.auth().createUserWithEmailAndPassword(this.state.email, this.state.password)
     .catch((error) => {
         console.log(error);
       })
@@ -45,26 +56,27 @@ class Login extends Component {
 
   render() {
     return (
-        <div className="col-md-6">
+      
+        <div style={loginStyles}>
             
           <form>
               
-            <div class="form-group"><br/><br/><br/>
+            <div class="form-group"><br/>
                 
-                <label for="exampleInputEmail1">Email address   </label>
+                <label for="exampleInputEmail1">Email address</label>
                 <input  value={this.state.email} onChange={this.handleChange} type="email" name="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" placeholder="Enter email" /><br/><br/><br/>
             </div>
             <div class="form-group">
-              <label for="exampleInputPassword1">Password    </label>
+              <label for="exampleInputPassword1">Password</label>
               <input  value={this.state.password} onChange={this.handleChange} type="password" name="password" class="form-control" id="exampleInputPassword1" placeholder="Password" />
             </div><br/><br/><br/>
-            <button type="submit" onClick={this.login} class="btn btn-primary">Login</button>
+            <button type="submit" onClick={this.login} className="btn btn-primary">Login</button>
             <button onClick={this.signup} style={{marginLeft: '25px'}} className="btn btn-success">Signup</button><br/><br/><br/>
             
             
           </form>
           <div>
-            <button onClick={this.loginF.bind(this)}>Login with Facebook</button>
+            <button onClick={this.loginF.bind(this)} className="btn btn-primary">Login with Facebook</button>
             </div>
         </div>
         
