@@ -4,6 +4,7 @@ import { compose, withProps, lifecycle } from "recompose"
 import { withScriptjs, withGoogleMap, GoogleMap, Marker } from "react-google-maps"
 import firebase from './config/Fire';
 
+
 const _ = require("lodash");
 const overlaysRef = firebase.database().ref('overlays');
 const { DrawingManager } = require("react-google-maps/lib/components/drawing/DrawingManager");
@@ -18,7 +19,7 @@ const MapWithADrawingManager = compose(
   }), lifecycle({
     componentWillMount() {
       const refs = {}
-
+      
       this.setState({
         bounds: null,
         center: {
@@ -57,7 +58,25 @@ const MapWithADrawingManager = compose(
             center: nextCenter,
             markers: nextMarkers,
           });
+
         },
+        getGeoLocation : () => {
+          if (navigator.geolocation) {
+              navigator.geolocation.getCurrentPosition(
+                  position => {
+                      console.log(position.coords);
+                      this.setState(prevState => ({
+                        currentLatLng: {
+                              ...prevState.currentLatLng,
+                              lat: position.coords.latitude,
+                              lng: position.coords.longitude
+                          }
+                          
+                      }))
+                  }
+              )
+          } 
+        }
       })
     },
   }),
@@ -69,12 +88,13 @@ const MapWithADrawingManager = compose(
     center={props.center}
     defaultZoom={17}
   >
-
+  
+    {props.isMarkerShown && <Marker position={{ lat: props.currentLocation.lat, lng: props.currentLocation.lng }} onClick={props.onMarkerClick} />}
     <DrawingManager
 
       onPolygonComplete={polygon => {
 
-        var myMvcArray = google.maps.MVCArray();
+        var myMvcArray = window.google.maps.MVCArray();
         polygon.setPaths(myMvcArray);
         polygon.getPaths();
 
@@ -85,7 +105,7 @@ const MapWithADrawingManager = compose(
       }}
 
       onPolylineComplete={polyline => {
-        overlaysRef.push(polyline.getPath().getArray())
+        //overlaysRef.push(polyline.getPath().getArray())
         console.log(polyline.getPath().getArray())
       }}
 
@@ -152,7 +172,7 @@ const MapWithADrawingManager = compose(
           border: `1px solid transparent`,
           width: `240px`,
           height: `32px`,
-          marginTop: `27px`,
+          marginTop: `10px`,
           padding: `0 12px`,
           borderRadius: `3px`,
           boxShadow: `0 2px 6px rgba(0, 0, 0, 0.3)`,
@@ -173,11 +193,36 @@ export default class App extends React.PureComponent {
   constructor(props) {
     super(props);
     this.logout = this.logout.bind(this);
+    this.getGeoLocation = this.getGeoLocation.bind(this);
+    this.state = {
+      currentLatLng : {
+        lat : 0,
+        lng : 0
+      },
+        isMarkerShown: false
+    }
+  
+  }
+  saveMap() {
 
   }
 
-  saveMap() {
-
+  getGeoLocation = () => {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            position => {
+                console.log(position.coords);
+                this.setState(prevState => ({
+                  currentLatLng: {
+                        ...prevState.currentLatLng,
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    }
+                    
+                }))
+            }
+        )
+    } 
   }
 
   logout() {
@@ -187,13 +232,18 @@ export default class App extends React.PureComponent {
 
   render() {
 
-
     return (
+      
 
       <div>
+        
         <h2>Map Creation</h2><br />
-        <MapWithADrawingManager /><br /><br />
-        <button onClick={this.Clear} className="btn btn-success">Save Map</button>
+        <MapWithADrawingManager
+        isMarkerShown={this.state.isMarkerShown}
+        onMarkerClick={this.handleMarkerClick}
+        currentLocation={this.state.getGeoLocation} /><br /><br />
+        <button onClick={this.getGeoLocation} className="btn btn-info">Find yourself</button><br /><br />
+        <button onClick={this.saveMap} className="btn btn-success">Save Map</button>
         <button onClick={this.logout} style={{ marginLeft: '25px' }} className="btn btn-primary">Logout</button>
 
       </div>
