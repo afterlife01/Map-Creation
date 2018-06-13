@@ -1,12 +1,12 @@
 import firebase from 'firebase';
 
   const config = {
-    apiKey: "AIzaSyB0PkIbPAsDdX1-ETlh3m_ct3lo7c_eIno",
-    authDomain: "projects-ebb91.firebaseapp.com",
-    databaseURL: "https://projects-ebb91.firebaseio.com",
-    projectId: "projects-ebb91",
-    storageBucket: "projects-ebb91.appspot.com",
-    messagingSenderId: "1008240443638"
+    apiKey: "AIzaSyCKe5TZUL0mrwjA6CfnPLvWZ9bihauM_NM",
+    authDomain: "map-creation-2d889.firebaseapp.com",
+    databaseURL: "https://map-creation-2d889.firebaseio.com",
+    projectId: "map-creation-2d889",
+    storageBucket: "map-creation-2d889.appspot.com",
+    messagingSenderId: "562265513034"
   };
 
     firebase.initializeApp(config)
