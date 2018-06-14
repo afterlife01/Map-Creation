@@ -21,19 +21,10 @@ const MapWithADrawingManager = compose(
       const refs = {}
       
       this.setState({
-        bounds: null,
-        center: {
-          lat: 13.652383, lng: 100.493872
-        },
+        
         markers: [],
         onMapMounted: ref => {
           refs.map = ref;
-        },
-        onBoundsChanged: () => {
-          this.setState({
-            bounds: refs.map.getBounds(),
-            center: refs.map.getCenter(),
-          })
         },
         onSearchBoxMounted: ref => {
           refs.searchBox = ref;
@@ -52,56 +43,38 @@ const MapWithADrawingManager = compose(
           const nextMarkers = places.map(place => ({
             position: place.geometry.location,
           }));
-          const nextCenter = _.get(nextMarkers, '0.position', this.state.center);
-
+          const nextCenter = _.get(nextMarkers, '0.position', this.state.currentLatLng);
+          
           this.setState({
-            center: nextCenter,
+            currentLatLng: nextCenter,
             markers: nextMarkers,
           });
 
         },
-        getGeoLocation : () => {
-          if (navigator.geolocation) {
-              navigator.geolocation.getCurrentPosition(
-                  position => {
-                      console.log(position.coords);
-                      this.setState(prevState => ({
-                        currentLatLng: {
-                              ...prevState.currentLatLng,
-                              lat: position.coords.latitude,
-                              lng: position.coords.longitude
-                          }
-                          
-                      }))
-                  }
-              )
-          } 
-        }
+          
+            
       })
     },
+      
   }),
   withScriptjs,
   withGoogleMap,
 )(props =>
   <GoogleMap
     ref={props.onMapMounted}
-    center={props.center}
+    center={props.currentLatLng}
     defaultZoom={17}
+    
   >
-  
-    {props.isMarkerShown && <Marker position={{ lat: props.currentLocation.lat, lng: props.currentLocation.lng }} onClick={props.onMarkerClick} />}
+    {props.isMarkerShown && <Marker position={props.currentLatLng} onClick={props.onMarkerClick} />}
+    
+    
     <DrawingManager
 
       onPolygonComplete={polygon => {
-
-        var myMvcArray = window.google.maps.MVCArray();
-        polygon.setPaths(myMvcArray);
-        polygon.getPaths();
-
-        //myMvcArray = polygon.getPaths();
-        console.log(myMvcArray.getArray());
-
-        //overlaysRef.push(myMvcArray)
+          var coordinates = (polygon.getPath().getArray());
+          console.log(coordinates);
+          polygon.setEditable(true);
       }}
 
       onPolylineComplete={polyline => {
@@ -160,7 +133,6 @@ const MapWithADrawingManager = compose(
     />
     <SearchBox
       ref={props.onSearchBoxMounted}
-      bounds={props.bounds}
       controlPosition={google.maps.ControlPosition.TOP_LEFT}
       onPlacesChanged={props.onPlacesChanged}
     >
@@ -188,46 +160,65 @@ const MapWithADrawingManager = compose(
   </GoogleMap>
 );
 
-export default class App extends React.PureComponent {
+class App extends React.PureComponent{
 
   constructor(props) {
     super(props);
     this.logout = this.logout.bind(this);
-    this.getGeoLocation = this.getGeoLocation.bind(this);
+    this.handleClick = this.handleClick.bind(this);
     this.state = {
-      currentLatLng : {
-        lat : 0,
-        lng : 0
-      },
-        isMarkerShown: false
+     currentLatLng:{
+      lat: 13.652383, lng: 100.493872
+     },
+      isMarkerShown : false
     }
+    
   
   }
   saveMap() {
 
   }
+  handleClick(){
+    
+    this.getGeoLocation();
+    this.handleMarkerClick();
+    this.handleMarkerClick2();
+  }
 
+  
+  
   getGeoLocation = () => {
-    if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             position => {
                 console.log(position.coords);
                 this.setState(prevState => ({
-                  currentLatLng: {
+                    currentLatLng: {
                         ...prevState.currentLatLng,
                         lat: position.coords.latitude,
                         lng: position.coords.longitude
                     }
-                    
                 }))
             }
         )
-    } 
+    }
+
+  componentDidMount() {
+    this.handleClick();
+  }
+  handleMarkerClick2 = () => {
+    setTimeout(() => {
+      this.setState({ isMarkerShown: false })
+    }, 6000)
   }
 
   logout() {
     firebase.auth().signOut();
     this.setState({ user: null });
+  }
+  handleMarkerClick = () => {
+    setTimeout(() => {
+      this.setState({ isMarkerShown: true })
+    }, 3000)
   }
 
   render() {
@@ -239,10 +230,10 @@ export default class App extends React.PureComponent {
         
         <h2>Map Creation</h2><br />
         <MapWithADrawingManager
+        currentLatLng={this.state.currentLatLng}
         isMarkerShown={this.state.isMarkerShown}
-        onMarkerClick={this.handleMarkerClick}
-        currentLocation={this.state.getGeoLocation} /><br /><br />
-        <button onClick={this.getGeoLocation} className="btn btn-info">Find yourself</button><br /><br />
+        currentLocation={this.props.currentLatLng} /><br /><br />
+        <button onClick={this.handleClick}  className="btn btn-info">Find yourself</button><br /><br />
         <button onClick={this.saveMap} className="btn btn-success">Save Map</button>
         <button onClick={this.logout} style={{ marginLeft: '25px' }} className="btn btn-primary">Logout</button>
 
@@ -250,3 +241,5 @@ export default class App extends React.PureComponent {
     )
   }
 }
+
+export default  App 
