@@ -2,11 +2,10 @@
 import React from "react"
 import { compose, withProps, lifecycle } from "recompose"
 import { withScriptjs, withGoogleMap, GoogleMap, Marker } from "react-google-maps"
-import firebase from './config/Fire';
+import firebase , {db} from './config/Fire';
 
 
 const _ = require("lodash");
-const overlaysRef = firebase.database().ref('overlays');
 const { DrawingManager } = require("react-google-maps/lib/components/drawing/DrawingManager");
 const { SearchBox } = require("react-google-maps/lib/components/places/SearchBox");
 const MapWithADrawingManager = compose(
@@ -49,13 +48,13 @@ const MapWithADrawingManager = compose(
             currentLatLng: nextCenter,
             markers: nextMarkers,
           });
+          
 
         },
           
             
       })
     },
-      
   }),
   withScriptjs,
   withGoogleMap,
@@ -72,30 +71,76 @@ const MapWithADrawingManager = compose(
     <DrawingManager
 
       onPolygonComplete={polygon => {
-          var coordinates = (polygon.getPath().getArray());
-          console.log(coordinates);
-          polygon.setEditable(true);
+        console.log("this polygon length: " + polygon.getPath().getLength());
+
+        var coords = [];
+
+
+        polygon.getPath().forEach(function (value, index) {
+          console.log(value.lat(), value.lng());
+          coords.push({
+            latitude: value.lat(),
+            longitude: value.lng()
+          });
+        });
+
+        db.collection("users").doc("userId").collection("polygon").add({
+          //add data here
+          latlng: coords
+        }).then(function () {
+          console.log("Document successfully written!");
+        })
+          .catch(function (error) {
+            console.error("Error writing document: ", error);
+          });
       }}
 
       onPolylineComplete={polyline => {
-        //overlaysRef.push(polyline.getPath().getArray())
-        console.log(polyline.getPath().getArray())
-      }}
+        console.log("this polyline length: " + polyline.getPath().getLength());
 
-      onRectangleComplete={rectangle => {
-        console.log(rectangle.getBounds())
-        overlaysRef.push(rectangle.getBounds())
+        var coords = [];
+
+
+        polyline.getPath().forEach(function (value, index) {
+          console.log(value.lat(), value.lng());
+          coords.push({
+            latitude: value.lat(),
+            longitude: value.lng()
+          });
+        });
+
+        db.collection("users").doc("userId").collection("polyline").add({
+          //add data here
+          latlng: coords
+        }).then(function () {
+          console.log("Document successfully written!");
+        })
+          .catch(function (error) {
+            console.error("Error writing document: ", error);
+          });
       }}
 
       onMarkerComplete={marker => {
-        console.log(marker.getPosition())
-        //overlaysRef.push(marker.getPosition())
+        console.log(marker.getPosition().lat(), marker.getPosition().lng())
+
+        var coords = []
+
+        coords.push({
+          latitude: marker.getPosition().lat(),
+          longitude: marker.getPosition().lng()
+        });
+
+        db.collection("users").doc("userId").collection("marker").add({
+          //add data here
+          latlng: coords
+        }).then(function () {
+          console.log("Document successfully written!");
+        })
+          .catch(function (error) {
+            console.error("Error writing document: ", error);
+          });
       }}
 
-      onCircleComplete={circle => {
-        console.log(circle.getBounds())
-        overlaysRef.push(circle.getBounds())
-      }}
 
       defaultOptions={{
 
@@ -106,30 +151,20 @@ const MapWithADrawingManager = compose(
           drawingModes: [
             google.maps.drawing.OverlayType.POLYGON,
             google.maps.drawing.OverlayType.POLYLINE,
-            google.maps.drawing.OverlayType.RECTANGLE,
             google.maps.drawing.OverlayType.MARKER,
-            google.maps.drawing.OverlayType.CIRCLE,
 
           ],
-        },
-        rectangleOptions: {
+          polygonOptions: {
           fillColor: '#BCDCF9',
 
-        },
-        circleOptions: {
-          fillColor: '#BCDCF9',
+          },
+          polylineOptions: {
 
-        },
-        polygonOptions: {
-          fillColor: '#BCDCF9',
-
-        },
-        polylineOptions: {
-
-        }
+          }
       }
 
       }
+    }
     />
     <SearchBox
       ref={props.onSearchBoxMounted}
@@ -157,6 +192,7 @@ const MapWithADrawingManager = compose(
     {props.markers.map((marker, index) =>
       <Marker key={index} position={marker.position} />
     )}
+    
   </GoogleMap>
 );
 
@@ -170,7 +206,7 @@ class App extends React.PureComponent{
      currentLatLng:{
       lat: 13.652383, lng: 100.493872
      },
-      isMarkerShown : false
+      isMarkerShown : true
     }
     
   
@@ -208,7 +244,7 @@ class App extends React.PureComponent{
   handleMarkerClick2 = () => {
     setTimeout(() => {
       this.setState({ isMarkerShown: false })
-    }, 6000)
+    }, 5000)
   }
 
   logout() {
@@ -216,9 +252,9 @@ class App extends React.PureComponent{
     this.setState({ user: null });
   }
   handleMarkerClick = () => {
-    setTimeout(() => {
+    
       this.setState({ isMarkerShown: true })
-    }, 3000)
+    
   }
 
   render() {
@@ -232,7 +268,7 @@ class App extends React.PureComponent{
         <MapWithADrawingManager
         currentLatLng={this.state.currentLatLng}
         isMarkerShown={this.state.isMarkerShown}
-        currentLocation={this.props.currentLatLng} /><br /><br />
+         /><br /><br />
         <button onClick={this.handleClick}  className="btn btn-info">Find yourself</button><br /><br />
         <button onClick={this.saveMap} className="btn btn-success">Save Map</button>
         <button onClick={this.logout} style={{ marginLeft: '25px' }} className="btn btn-primary">Logout</button>
