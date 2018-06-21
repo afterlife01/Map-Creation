@@ -2,9 +2,16 @@
 /*global google*/
 
 import React from "react"
+<<<<<<< HEAD
 import { compose, withProps, lifecycle, withStateHandlers } from "recompose"
 import { withScriptjs, withGoogleMap, GoogleMap, Marker, Polygon, Polyline } from "react-google-maps"
 import firebase, { db } from './config/Fire';
+=======
+import { compose, withProps, lifecycle } from "recompose"
+import { withScriptjs, withGoogleMap, GoogleMap, Marker } from "react-google-maps"
+import firebase , {db} from './config/Fire';
+
+>>>>>>> 070bde1eb546e9cb2f6dafb65624f4591f2bd460
 
 const _ = require("lodash");
 const { DrawingManager } = require("react-google-maps/lib/components/drawing/DrawingManager");
@@ -19,19 +26,17 @@ const MapWithADrawingManager = compose(
   }), lifecycle({
     componentWillMount() {
       const refs = {}
-
+      
       this.setState({
+<<<<<<< HEAD
         bounds: null,
+=======
+        
+>>>>>>> 070bde1eb546e9cb2f6dafb65624f4591f2bd460
         markers: [],
 
         onMapMounted: ref => {
           refs.map = ref;
-        },
-        onBoundsChanged: () => {
-          this.setState({
-            bounds: refs.map.getBounds(),
-            center: refs.map.getCenter(),
-          })
         },
         onSearchBoxMounted: ref => {
           refs.searchBox = ref;
@@ -50,13 +55,22 @@ const MapWithADrawingManager = compose(
           const nextMarkers = places.map(place => ({
             position: place.geometry.location,
           }));
+<<<<<<< HEAD
           const nextCenter = _.get(nextMarkers, '0.position', this.props.center);
 
+=======
+          const nextCenter = _.get(nextMarkers, '0.position', this.state.currentLatLng);
+          
+>>>>>>> 070bde1eb546e9cb2f6dafb65624f4591f2bd460
           this.setState({
-            center: nextCenter,
+            currentLatLng: nextCenter,
             markers: nextMarkers,
           });
+          
+
         },
+          
+            
       })
 
     },
@@ -73,8 +87,9 @@ const MapWithADrawingManager = compose(
 )(props =>
   <GoogleMap
     ref={props.onMapMounted}
-    center={props.center}
+    center={props.currentLatLng}
     defaultZoom={17}
+<<<<<<< HEAD
     defaultMapTypeId={'satellite'}
     defaultOptions={{
       mapTypeControlOptions: {
@@ -123,14 +138,39 @@ const MapWithADrawingManager = compose(
         polygon.getPath().forEach(function (value) {
           console.log(value.lat(), value.lng());
           polyCoords.push({
+=======
+    
+  >
+    {props.isMarkerShown && <Marker position={props.currentLatLng} onClick={props.onMarkerClick} />}
+    
+    
+    <DrawingManager
+
+      onPolygonComplete={polygon => {
+        console.log("this polygon length: " + polygon.getPath().getLength());
+
+        var coords = [];
+
+
+        polygon.getPath().forEach(function (value, index) {
+          console.log(value.lat(), value.lng());
+          coords.push({
+>>>>>>> 070bde1eb546e9cb2f6dafb65624f4591f2bd460
             latitude: value.lat(),
             longitude: value.lng()
           });
         });
+<<<<<<< HEAD
         //add coords array to cloud firestore
         db.collection("users").doc("userId").collection("polygon").add({
           //add data here
           polyCoords,
+=======
+
+        db.collection("users").doc("userId").collection("polygon").add({
+          //add data here
+          latlng: coords
+>>>>>>> 070bde1eb546e9cb2f6dafb65624f4591f2bd460
         }).then(function () {
           console.log("Document successfully written!");
         })
@@ -141,6 +181,7 @@ const MapWithADrawingManager = compose(
 
       //call when polyline complete
       onPolylineComplete={polyline => {
+<<<<<<< HEAD
         var polylineCoords = []
         console.log(polyline.getPath().getLength())
 
@@ -165,23 +206,59 @@ const MapWithADrawingManager = compose(
             console.error("Error writing document: ", error);
           });
 
+=======
+        console.log("this polyline length: " + polyline.getPath().getLength());
+
+        var coords = [];
+
+
+        polyline.getPath().forEach(function (value, index) {
+          console.log(value.lat(), value.lng());
+          coords.push({
+            latitude: value.lat(),
+            longitude: value.lng()
+          });
+        });
+
+        db.collection("users").doc("userId").collection("polyline").add({
+          //add data here
+          latlng: coords
+        }).then(function () {
+          console.log("Document successfully written!");
+        })
+          .catch(function (error) {
+            console.error("Error writing document: ", error);
+          });
+>>>>>>> 070bde1eb546e9cb2f6dafb65624f4591f2bd460
       }}
 
       //call when marker complete
       onMarkerComplete={marker => {
+<<<<<<< HEAD
 
         var markerCoords = []
         console.log(marker.getPosition())
         //store data to cloud firestore
         markerCoords.push({
+=======
+        console.log(marker.getPosition().lat(), marker.getPosition().lng())
+
+        var coords = []
+
+        coords.push({
+>>>>>>> 070bde1eb546e9cb2f6dafb65624f4591f2bd460
           latitude: marker.getPosition().lat(),
           longitude: marker.getPosition().lng()
         });
 
         db.collection("users").doc("userId").collection("marker").add({
           //add data here
+<<<<<<< HEAD
           markerCoords,
 
+=======
+          latlng: coords
+>>>>>>> 070bde1eb546e9cb2f6dafb65624f4591f2bd460
         }).then(function () {
           console.log("Document successfully written!");
         })
@@ -189,9 +266,14 @@ const MapWithADrawingManager = compose(
             console.error("Error writing document: ", error);
           });
       }}
+<<<<<<< HEAD
       onRectangleComplete={rectangle => {
         console.log(props.queryShape)
       }}
+=======
+
+
+>>>>>>> 070bde1eb546e9cb2f6dafb65624f4591f2bd460
       defaultOptions={{
         drawingControl: true,
         drawingControlOptions: {
@@ -201,6 +283,7 @@ const MapWithADrawingManager = compose(
             google.maps.drawing.OverlayType.POLYGON,
             google.maps.drawing.OverlayType.POLYLINE,
             google.maps.drawing.OverlayType.MARKER,
+<<<<<<< HEAD
             google.maps.drawing.OverlayType.RECTANGLE,
           ],
         },
@@ -217,13 +300,24 @@ const MapWithADrawingManager = compose(
         },
         markerOption: {
         }
+=======
+
+          ],
+          polygonOptions: {
+          fillColor: '#BCDCF9',
+
+          },
+          polylineOptions: {
+
+          }
+>>>>>>> 070bde1eb546e9cb2f6dafb65624f4591f2bd460
       }
 
       }
+    }
     />
     <SearchBox
       ref={props.onSearchBoxMounted}
-      bounds={props.bounds}
       controlPosition={google.maps.ControlPosition.TOP_LEFT}
       onPlacesChanged={props.onPlacesChanged}
     >
@@ -248,10 +342,18 @@ const MapWithADrawingManager = compose(
     {props.markers.map((marker, index) =>
       <Marker key={index} position={marker.position} />
     )}
+<<<<<<< HEAD
     {props.isMarkerShown && <Marker position={props.center} onClick={props.onMarkerClick} />}
   </GoogleMap>
 );
 
+=======
+    
+  </GoogleMap>
+);
+
+class App extends React.PureComponent{
+>>>>>>> 070bde1eb546e9cb2f6dafb65624f4591f2bd460
 
 
 export default class App extends React.PureComponent {
@@ -259,6 +361,7 @@ export default class App extends React.PureComponent {
     super(props);
     this.logout = this.logout.bind(this);
     this.handleClick = this.handleClick.bind(this);
+<<<<<<< HEAD
     this.queryPolygon = this.queryPolygon.bind(this)
     this.state = {
       currentLatLng: {
@@ -285,11 +388,24 @@ export default class App extends React.PureComponent {
 
 
   handleClick() {
+=======
+    this.state = {
+     currentLatLng:{
+      lat: 13.652383, lng: 100.493872
+     },
+      isMarkerShown : true
+    }
+    
+  
+  }
+  saveMap() {
+>>>>>>> 070bde1eb546e9cb2f6dafb65624f4591f2bd460
 
     this.getGeoLocation();
     this.handleMarkerClick();
     this.handleMarkerClick2();
   }
+<<<<<<< HEAD
   getGeoLocation = () => {
     navigator.geolocation.getCurrentPosition(
       position => {
@@ -308,7 +424,39 @@ export default class App extends React.PureComponent {
   componentDidMount() {
 
     this.handleClick();
+=======
+  handleClick(){
+    
+    this.getGeoLocation();
+    this.handleMarkerClick();
+    this.handleMarkerClick2();
+  }
 
+  
+  
+  getGeoLocation = () => {
+        navigator.geolocation.getCurrentPosition(
+            position => {
+                console.log(position.coords);
+                this.setState(prevState => ({
+                    currentLatLng: {
+                        ...prevState.currentLatLng,
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    }
+                }))
+            }
+        )
+    }
+>>>>>>> 070bde1eb546e9cb2f6dafb65624f4591f2bd460
+
+  componentDidMount() {
+    this.handleClick();
+  }
+  handleMarkerClick2 = () => {
+    setTimeout(() => {
+      this.setState({ isMarkerShown: false })
+    }, 5000)
   }
   handleMarkerClick2 = () => {
     setTimeout(() => {
@@ -321,12 +469,35 @@ export default class App extends React.PureComponent {
     this.setState({ user: null });
   }
   handleMarkerClick = () => {
+<<<<<<< HEAD
     this.setState({ isMarkerShown: true })
   }
   render() {
 
     return (
       <div>
+=======
+    
+      this.setState({ isMarkerShown: true })
+    
+  }
+
+  render() {
+
+    return (
+      
+
+      <div>
+        
+        <h2>Map Creation</h2><br />
+        <MapWithADrawingManager
+        currentLatLng={this.state.currentLatLng}
+        isMarkerShown={this.state.isMarkerShown}
+         /><br /><br />
+        <button onClick={this.handleClick}  className="btn btn-info">Find yourself</button><br /><br />
+        <button onClick={this.saveMap} className="btn btn-success">Save Map</button>
+        <button onClick={this.logout} style={{ marginLeft: '25px' }} className="btn btn-primary">Logout</button>
+>>>>>>> 070bde1eb546e9cb2f6dafb65624f4591f2bd460
 
         <MapWithADrawingManager
           center={this.state.center}
@@ -341,4 +512,10 @@ export default class App extends React.PureComponent {
       </div>
     )
   }
+<<<<<<< HEAD
 }
+=======
+}
+
+export default  App 
+>>>>>>> 070bde1eb546e9cb2f6dafb65624f4591f2bd460
