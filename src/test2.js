@@ -16,42 +16,25 @@ const MapWithADrawingManager = compose(
     loadingElement: <div style={{ height: `100%` }} />,
     containerElement: <div style={{ height: `35vw` }} />,
     mapElement: <div style={{ height: `100%` }} />,
-    arrayOfShapes: [],
+    stringg: "I'm string!"
   }),
   lifecycle({
     componentWillMount() {
-
       const refs = {}
+      console.log("will ")
 
       this.setState({
         bounds: null,
         markers: [],
-
-        handleOverlayComplete = (evt) => {
-          console.log("saf")
-          const type = evt.type; // "CIRCLE", "POLYGON", etc
-          const overlay = evt.overlay; // regular Google maps API object
-        
-          // Use react-google-maps instead of the created overlay object
-          google.maps.event.clearInstanceListeners(overlay);
-          overlay.setMap(null);
-        
-          // Ok, now we can handle the event in a "controlled" way
-          this.props.doSomethingReactWithTheData(overlay);
-          // ex:
-          // let radius = overlay.getRadius();
-          // let center = overlay.getCenter();
-          // this.setState({ circles: [ ...this.state.circles, { radius, center }]});
-        },
 
         onMapMounted: ref => {
           refs.map = ref;
         },
         onSearchBoxMounted: ref => {
           refs.searchBox = ref;
+
         },
         onPlacesChanged: () => {
-          console.log(this.props.myString)
           const places = refs.searchBox.getPlaces();
           const bounds = new google.maps.LatLngBounds();
           places.forEach(place => {
@@ -73,8 +56,12 @@ const MapWithADrawingManager = compose(
         },
       })
     },
-  })
-  ,
+  }),
+  withStateHandlers(
+    () => ({ arrayOfShapes: [] }), {
+      onRectangleAdd: ({ rectangle }) => () => ({ arrayOfShapes: rectangle }),
+    }
+  ),
   withScriptjs,
   withGoogleMap,
 )(props =>
@@ -103,8 +90,8 @@ const MapWithADrawingManager = compose(
           return <Polygon
             //ref={(ref) => { this.ref = ref; }}
             path={polygonObject}
-            onClick={() => console.log("poly ob", polygonObject)}
-          />
+            onClick={() => console.log("poly ob", polygonObject)
+            } />
         }
       })
     }
@@ -122,12 +109,10 @@ const MapWithADrawingManager = compose(
       })
     }
 
-
     <DrawingManager
 
-      onOverlaycomplete={this.handleOverlayComplete}
+      onRectangleComplete={rectangle => {
 
-      onRectanglecomplete={rectangle => {
         this.onRectangleAdd(rectangle)
       }}
 
@@ -271,8 +256,6 @@ const MapWithADrawingManager = compose(
   </GoogleMap>
 );
 
-
-
 export default class App extends React.PureComponent {
   constructor(props) {
     super(props);
@@ -316,6 +299,8 @@ export default class App extends React.PureComponent {
     this.getGeoLocation();
     this.handleMarkerClick();
     this.handleMarkerClick2();
+    this.querymarker();
+    this.queryPolygon();
   }
   getGeoLocation = () => {
     navigator.geolocation.getCurrentPosition(
@@ -332,10 +317,6 @@ export default class App extends React.PureComponent {
     )
   }
 
-
-  componentDidMount() {
-    this.handleClick();
-  }
   handleMarkerClick2 = () => {
     setTimeout(() => {
       this.setState({ isMarkerShown: false })

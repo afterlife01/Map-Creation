@@ -33,13 +33,14 @@ db.collection("users").doc("userId").collection("polygon").get().then(function (
 
 
 //coords to draw polygon on map
-// path={[
-    //   new google.maps.LatLng(13.6523, 100.4938),
-    //   new google.maps.LatLng(13.5544, 134.2465),
-    //   new google.maps.LatLng(35.5321, 134.2454),
-    //   new google.maps.LatLng(35.5396, 134.2609),
-    //   new google.maps.LatLng(35.5460, 134.2622),
-    // ]}
+var jpath =
+  [
+    { lat: 13.7739818, lng: 100.546488 },
+    { lat: 13.5544, lng: 134.2465 },
+    { lat: 35.5321, lng: 134.2454 },
+    { lat: 35.5396, lng: 134.2609 },
+    { lat: 35.5460, lng: 134.2622 },
+  ]
         
 
 */
