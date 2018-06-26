@@ -37,64 +37,58 @@ const MapWithADrawingManager = compose(
 
           this.setState({
             testState: arrayOfShapes
-          }, ()=> {
+          }, () => {
             console.log("click!", this.state.testState)
           })
 
-
-          //   //add coords array to cloud firestore
-          //   db.collection("users").add({
-          //     //add data here
-          //     arrayOfShapes
-          //   }).then(function () {
-          //     console.log("Document successfully written!");
-          //   })
-          //     .catch(function (error) {
-          //       console.error("Error writing document: ", error);
-          //     });
+          //add coords array to cloud firestore
+          db.collection("users").add({
+            //add data here
+            arrayOfShapes
+          }).then(function () {
+            console.log("Document successfully written!");
+          })
+            .catch(function (error) {
+              console.error("Error writing document: ", error);
+            });
         },
 
         onOverlayAdd: (overlay) => {
           // console.log("adsfwe", overlay)
 
-
           var Overlay = overlay.overlay //get overlay object data
           var OverlayType = overlay.type //get type of overlay
+          var OverlayCoords = []
 
-          if (OverlayType === "rectangle") {
-            console.log("get rekt!", Overlay)
-            arrayOfShapes.push({
-              "overlayType": OverlayType,
-              "coords": Overlay
-            })
-          }
-
-          if (OverlayType === "polygon") {
+          if (OverlayType === "polygon" || OverlayType === "polyline") {
             console.log("get poly!", Overlay)
             //console.log("area is ", google.maps.geometry.spherical.computeArea(Overlay.getPath()))
-            arrayOfShapes.push({
-              "overlayType": OverlayType,
-              "coords": Overlay
-            })
 
-          }
-          if (OverlayType === "polyline") {
-            console.log("get polyL!", Overlay)
-            arrayOfShapes.push({
-              "overlayType": OverlayType,
-              "coords": Overlay
-            })
-
+            //loop for store LatLng to coords array
+            Overlay.getPath().forEach(function (value) {
+              console.log(value.lat(), value.lng());
+              OverlayCoords.push({
+                latitude: value.lat(),
+                longitude: value.lng()
+              });
+            });
+            console.log("pcoords", OverlayCoords)
+            //push data that can save to firestore to object
           }
 
           if (OverlayType === "marker") {
-            console.log("get markZuker!", Overlay)
-            arrayOfShapes.push({
-              "overlayType": OverlayType,
-              "coords": Overlay
-            })
-
+            console.log(Overlay.getPosition())
+            //store data to cloud firestore
+            OverlayCoords.push({
+              latitude: Overlay.getPosition().lat(),
+              longitude: Overlay.getPosition().lng()
+            });
           }
+
+          arrayOfShapes.push({
+            "overlayType": OverlayType,
+            "coords": OverlayCoords
+          })
 
         },
 
@@ -253,7 +247,6 @@ const MapWithADrawingManager = compose(
 
       //call when marker complete
       onMarkerComplete={marker => {
-        console.log("stateee", props.testState)
         // var markerCoords = []
         // console.log(marker.getPosition())
         // //store data to cloud firestore
