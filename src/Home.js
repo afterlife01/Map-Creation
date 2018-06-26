@@ -33,52 +33,71 @@ const MapWithADrawingManager = compose(
           editable: true,
         },
 
+        onOverlayQuery: () => {
+          let arr = []
+          db.collection("users")
+            .get().then(function (querySnapshot) {
+              querySnapshot.forEach(function (doc) {
+                arr.push(doc.data().arrayOfShapes)
+              });
+            });
+          console.log("get data ", arr)
+          
+        },
         onOverlaySave: () => {
 
-          this.setState({
-            testState: arrayOfShapes
-          }, () => {
-            console.log("click!", this.state.testState)
-          })
+          if (arrayOfShapes.length > 0) {
+            this.setState({
+              testState: arrayOfShapes
+            }, () => {
+              console.log("click!", this.state.testState)
+            })
+            //add coords array to cloud firestore
+            db.collection("users").doc("userId").set({
+              //add data here
+              arrayOfShapes
+            }, { merge: true }).then(function () {
+              console.log("Document successfully written!");
+            })
+              .catch(function (error) {
+                console.error("Error writing document: ", error);
+              });
+          }
+          else alert("Has nothing to save!")
 
-          //add coords array to cloud firestore
-          db.collection("users").add({
-            //add data here
-            arrayOfShapes
-          }).then(function () {
-            console.log("Document successfully written!");
-          })
-            .catch(function (error) {
-              console.error("Error writing document: ", error);
-            });
         },
 
         onOverlayAdd: (overlay) => {
-          // console.log("adsfwe", overlay)
 
           var Overlay = overlay.overlay //get overlay object data
           var OverlayType = overlay.type //get type of overlay
           var OverlayCoords = []
 
           if (OverlayType === "polygon" || OverlayType === "polyline") {
-            console.log("get poly!", Overlay)
-            //console.log("area is ", google.maps.geometry.spherical.computeArea(Overlay.getPath()))
-
             //loop for store LatLng to coords array
+
+            //compute area
+            if (OverlayType === "polygon") {
+              console.log("area is ", google.maps.geometry.spherical.computeArea(Overlay.getPath()), "ตารางเมตร")
+            }
+
+            //compute length 
+            if (OverlayType === "polyline") {
+              console.log("length is ", google.maps.geometry.spherical.computeLength(Overlay.getPath()), "เมตร")
+            }
+
             Overlay.getPath().forEach(function (value) {
-              console.log(value.lat(), value.lng());
               OverlayCoords.push({
                 latitude: value.lat(),
                 longitude: value.lng()
               });
             });
-            console.log("pcoords", OverlayCoords)
+
             //push data that can save to firestore to object
           }
 
           if (OverlayType === "marker") {
-            console.log(Overlay.getPosition())
-            //store data to cloud firestore
+            //push data in to array
             OverlayCoords.push({
               latitude: Overlay.getPosition().lat(),
               longitude: Overlay.getPosition().lng()
@@ -89,7 +108,7 @@ const MapWithADrawingManager = compose(
             "overlayType": OverlayType,
             "coords": OverlayCoords
           })
-
+          console.log("#overlay in this arr ", arrayOfShapes)
         },
 
         onMapMounted: ref => {
@@ -142,7 +161,11 @@ const MapWithADrawingManager = compose(
       <div>
         <button className="btn btn-info"
           onClick={props.onOverlaySave}>
-          Hello world!
+          Save!
+        </button>
+        <button className="btn btn-info"
+          onClick={props.onOverlayQuery}>
+          Get shape!
         </button>
       </div>
     </MapControl>
@@ -183,88 +206,6 @@ const MapWithADrawingManager = compose(
 
       onOverlayComplete={overlay => {
         props.onOverlayAdd(overlay)
-      }}
-
-      onRectangleComplete={rectangle => {
-        //props.onRectangleAdd(rectangle)
-      }}
-
-      //call when draw polygon complete
-      onPolygonComplete={polygon => {
-
-        // var polyCoords = []
-        // //loop for store LatLng to coords array
-        // polygon.getPath().forEach(function (value) {
-        //   console.log(value.lat(), value.lng());
-        //   polyCoords.push({
-        //     latitude: value.lat(),
-        //     longitude: value.lng()
-        //   });
-        // });
-        // console.log("pcoords", polyCoords)
-
-        // //add coords array to cloud firestore
-        // db.collection("users").doc("userId").collection("polygon").add({
-        //   //add data here
-        //   polyCoords,
-        // }).then(function () {
-        //   console.log("Document successfully written!");
-        // })
-        //   .catch(function (error) {
-        //     console.error("Error writing document: ", error);
-        //   });
-      }
-      }
-
-      //call when polyline complete
-      onPolylineComplete={polyline => {
-
-        // var polylineCoords = []
-        // console.log(polyline.getPath().getLength())
-
-        // //loop for store LatLng to coords array
-        // polyline.getPath().forEach(function (value) {
-        //   console.log(value.lat(), value.lng());
-        //   polylineCoords.push({
-        //     latitude: value.lat(),
-        //     longitude: value.lng()
-        //   });
-        // });
-
-        // //add coords array to cloud firestore
-        // db.collection("users").doc("userId").collection("polyline").add({
-        //   //add data here
-        //   polylineCoords,
-
-        // }).then(function () {
-        //   console.log("Document successfully written!");
-        // })
-        //   .catch(function (error) {
-        //     console.error("Error writing document: ", error);
-        //   });
-
-      }}
-
-      //call when marker complete
-      onMarkerComplete={marker => {
-        // var markerCoords = []
-        // console.log(marker.getPosition())
-        // //store data to cloud firestore
-        // markerCoords.push({
-        //   latitude: marker.getPosition().lat(),
-        //   longitude: marker.getPosition().lng()
-        // });
-
-        // db.collection("users").doc("userId").collection("marker").add({
-        //   //add data here
-        //   markerCoords,
-
-        // }).then(function () {
-        //   console.log("Document successfully written!");
-        // })
-        //   .catch(function (error) {
-        //     console.error("Error writing document: ", error);
-        //   });
       }}
 
       defaultOptions={{
@@ -338,8 +279,6 @@ export default class App extends React.PureComponent {
     super(props);
     this.logout = this.logout.bind(this);
     this.handleClick = this.handleClick.bind(this);
-    this.queryPolygon = this.queryPolygon.bind(this)
-    this.querymarker = this.querymarker.bind(this);
     this.state = {
       currentLatLng: {
         lat: 13.652383, lng: 100.493872
@@ -348,29 +287,6 @@ export default class App extends React.PureComponent {
       temp: [],
       tempMarker: [],
     }
-  }
-  queryPolygon() {
-    let arr = []
-    db.collection("users").doc("userId").collection("polygon").get().then(function (querySnapshot) {
-      querySnapshot.forEach(function (doc) {
-        arr.push(doc.data())
-      });
-    });
-    this.setState({
-      temp: arr
-    })
-  }
-
-  querymarker() {
-    let arr = []
-    db.collection("users").doc("userId").collection("marker").get().then(function (querySnapshot) {
-      querySnapshot.forEach(function (doc) {
-        arr.push(doc.data())
-      });
-    });
-    this.setState({
-      tempMarker: arr
-    })
   }
 
   handleClick() {
@@ -421,12 +337,10 @@ export default class App extends React.PureComponent {
         /><br /><br />
         {/*
 <button onClick={this.handleClick} className="btn btn-info">Find yourself</button> <br /> <br />
-        <button onClick={this.queryPolygon} className="btn btn-success">Get shape</button>
-        <button onClick={this.querymarker} className="btn btn-success">Get shape marker</button>
-        <button onClick={this.logout} style={{ marginLeft: '25px' }} className="btn btn-primary">Logout</button>
+      
 */}
 
-
+        <button onClick={this.logout} style={{ marginLeft: '25px' }} className="btn btn-primary">Logout</button>
       </div>
     )
   }
