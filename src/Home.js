@@ -1,10 +1,12 @@
 //dont delete /*global google*/ below or you will be done
 /*global google*/
 
+//let จบลูปหาย - var ตรงกันข้าม 
 import React from "react"
-import { compose, withProps, lifecycle, withState, withHandlers, withStateHandlers } from "recompose"
-import { withScriptjs, withGoogleMap, GoogleMap, Marker, Polygon, Polyline, GoogleMapLoader, CustomControl } from "react-google-maps"
+import { compose, withProps, lifecycle, } from "recompose"
+import { withScriptjs, withGoogleMap, GoogleMap, Marker, Polygon, Polyline, } from "react-google-maps"
 import firebase, { db } from './config/Fire';
+import MapControl from './components/MapControl'
 
 const _ = require("lodash");
 const { DrawingManager } = require("react-google-maps/lib/components/drawing/DrawingManager");
@@ -16,32 +18,84 @@ const MapWithADrawingManager = compose(
     loadingElement: <div style={{ height: `100%` }} />,
     containerElement: <div style={{ height: `35vw` }} />,
     mapElement: <div style={{ height: `100%` }} />,
-    arrayOfShapes: [],
   }),
   lifecycle({
-    componentWillMount() {
-
+    componentDidMount() {
       const refs = {}
+      let arrayOfShapes = []
 
       this.setState({
-        bounds: null,
         markers: [],
+        testState: {},
+        option: {
+          fillColor: '#BCDCF9',
+          strokeColor: '#FF4500',
+          editable: true,
+        },
 
-        handleOverlayComplete = (evt) => {
-          console.log("saf")
-          const type = evt.type; // "CIRCLE", "POLYGON", etc
-          const overlay = evt.overlay; // regular Google maps API object
-        
-          // Use react-google-maps instead of the created overlay object
-          google.maps.event.clearInstanceListeners(overlay);
-          overlay.setMap(null);
-        
-          // Ok, now we can handle the event in a "controlled" way
-          this.props.doSomethingReactWithTheData(overlay);
-          // ex:
-          // let radius = overlay.getRadius();
-          // let center = overlay.getCenter();
-          // this.setState({ circles: [ ...this.state.circles, { radius, center }]});
+        onOverlaySave: () => {
+
+          this.setState({
+            testState: arrayOfShapes
+          }, ()=> {
+            console.log("click!", this.state.testState)
+          })
+
+
+          //   //add coords array to cloud firestore
+          //   db.collection("users").add({
+          //     //add data here
+          //     arrayOfShapes
+          //   }).then(function () {
+          //     console.log("Document successfully written!");
+          //   })
+          //     .catch(function (error) {
+          //       console.error("Error writing document: ", error);
+          //     });
+        },
+
+        onOverlayAdd: (overlay) => {
+          // console.log("adsfwe", overlay)
+
+
+          var Overlay = overlay.overlay //get overlay object data
+          var OverlayType = overlay.type //get type of overlay
+
+          if (OverlayType === "rectangle") {
+            console.log("get rekt!", Overlay)
+            arrayOfShapes.push({
+              "overlayType": OverlayType,
+              "coords": Overlay
+            })
+          }
+
+          if (OverlayType === "polygon") {
+            console.log("get poly!", Overlay)
+            //console.log("area is ", google.maps.geometry.spherical.computeArea(Overlay.getPath()))
+            arrayOfShapes.push({
+              "overlayType": OverlayType,
+              "coords": Overlay
+            })
+
+          }
+          if (OverlayType === "polyline") {
+            console.log("get polyL!", Overlay)
+            arrayOfShapes.push({
+              "overlayType": OverlayType,
+              "coords": Overlay
+            })
+
+          }
+
+          if (OverlayType === "marker") {
+            console.log("get markZuker!", Overlay)
+            arrayOfShapes.push({
+              "overlayType": OverlayType,
+              "coords": Overlay
+            })
+
+          }
+
         },
 
         onMapMounted: ref => {
@@ -51,7 +105,6 @@ const MapWithADrawingManager = compose(
           refs.searchBox = ref;
         },
         onPlacesChanged: () => {
-          console.log(this.props.myString)
           const places = refs.searchBox.getPlaces();
           const bounds = new google.maps.LatLngBounds();
           places.forEach(place => {
@@ -70,13 +123,14 @@ const MapWithADrawingManager = compose(
             center: nextCenter,
             markers: nextMarkers,
           });
+
         },
       })
-    },
-  })
-  ,
-  withScriptjs,
-  withGoogleMap,
+    },//end of willM
+  }),//end of lifeclycle
+
+  withScriptjs,//end of withScriptjs
+  withGoogleMap,//end of withGoogleMap
 )(props =>
   <GoogleMap
     ref={props.onMapMounted}
@@ -89,7 +143,17 @@ const MapWithADrawingManager = compose(
       },
     }}
   >
+    <MapControl
+      position={google.maps.ControlPosition.BOTTOM_CENTER}>
+      <div>
+        <button className="btn btn-info"
+          onClick={props.onOverlaySave}>
+          Hello world!
+        </button>
+      </div>
+    </MapControl>
 
+    <Polyline />
     {/*set data that get from firestore to overlay eg. draw saved data, overlayOption*/}
     {
       props.temp.map(polyCoords => {
@@ -109,7 +173,7 @@ const MapWithADrawingManager = compose(
       })
     }
     {
-      props.tempMarker.map(markerCoords => {
+      props.tempMarker.map(markerCoords => () => {
         for (var key in markerCoords) {
           let markerObject = {}
           var value = markerCoords[key]
@@ -121,29 +185,29 @@ const MapWithADrawingManager = compose(
         }
       })
     }
-
-
     <DrawingManager
 
-      onOverlaycomplete={this.handleOverlayComplete}
+      onOverlayComplete={overlay => {
+        props.onOverlayAdd(overlay)
+      }}
 
-      onRectanglecomplete={rectangle => {
-        this.onRectangleAdd(rectangle)
+      onRectangleComplete={rectangle => {
+        //props.onRectangleAdd(rectangle)
       }}
 
       //call when draw polygon complete
       onPolygonComplete={polygon => {
-        var polyCoords = []
-        console.log("this polygon length: " + polygon.getPath().getLength());
-        //loop for store LatLng to coords array
-        polygon.getPath().forEach(function (value) {
-          console.log(value.lat(), value.lng());
-          polyCoords.push({
-            latitude: value.lat(),
-            longitude: value.lng()
-          });
-        });
-        console.log("pcoords", polyCoords)
+
+        // var polyCoords = []
+        // //loop for store LatLng to coords array
+        // polygon.getPath().forEach(function (value) {
+        //   console.log(value.lat(), value.lng());
+        //   polyCoords.push({
+        //     latitude: value.lat(),
+        //     longitude: value.lng()
+        //   });
+        // });
+        // console.log("pcoords", polyCoords)
 
         // //add coords array to cloud firestore
         // db.collection("users").doc("userId").collection("polygon").add({
@@ -155,57 +219,59 @@ const MapWithADrawingManager = compose(
         //   .catch(function (error) {
         //     console.error("Error writing document: ", error);
         //   });
-      }}
+      }
+      }
 
       //call when polyline complete
       onPolylineComplete={polyline => {
-        var polylineCoords = []
-        console.log(polyline.getPath().getLength())
 
-        //loop for store LatLng to coords array
-        polyline.getPath().forEach(function (value) {
-          console.log(value.lat(), value.lng());
-          polylineCoords.push({
-            latitude: value.lat(),
-            longitude: value.lng()
-          });
-        });
+        // var polylineCoords = []
+        // console.log(polyline.getPath().getLength())
 
-        //add coords array to cloud firestore
-        db.collection("users").doc("userId").collection("polyline").add({
-          //add data here
-          polylineCoords,
+        // //loop for store LatLng to coords array
+        // polyline.getPath().forEach(function (value) {
+        //   console.log(value.lat(), value.lng());
+        //   polylineCoords.push({
+        //     latitude: value.lat(),
+        //     longitude: value.lng()
+        //   });
+        // });
 
-        }).then(function () {
-          console.log("Document successfully written!");
-        })
-          .catch(function (error) {
-            console.error("Error writing document: ", error);
-          });
+        // //add coords array to cloud firestore
+        // db.collection("users").doc("userId").collection("polyline").add({
+        //   //add data here
+        //   polylineCoords,
+
+        // }).then(function () {
+        //   console.log("Document successfully written!");
+        // })
+        //   .catch(function (error) {
+        //     console.error("Error writing document: ", error);
+        //   });
 
       }}
 
       //call when marker complete
       onMarkerComplete={marker => {
+        console.log("stateee", props.testState)
+        // var markerCoords = []
+        // console.log(marker.getPosition())
+        // //store data to cloud firestore
+        // markerCoords.push({
+        //   latitude: marker.getPosition().lat(),
+        //   longitude: marker.getPosition().lng()
+        // });
 
-        var markerCoords = []
-        console.log(marker.getPosition())
-        //store data to cloud firestore
-        markerCoords.push({
-          latitude: marker.getPosition().lat(),
-          longitude: marker.getPosition().lng()
-        });
+        // db.collection("users").doc("userId").collection("marker").add({
+        //   //add data here
+        //   markerCoords,
 
-        db.collection("users").doc("userId").collection("marker").add({
-          //add data here
-          markerCoords,
-
-        }).then(function () {
-          console.log("Document successfully written!");
-        })
-          .catch(function (error) {
-            console.error("Error writing document: ", error);
-          });
+        // }).then(function () {
+        //   console.log("Document successfully written!");
+        // })
+        //   .catch(function (error) {
+        //     console.error("Error writing document: ", error);
+        //   });
       }}
 
       defaultOptions={{
@@ -220,16 +286,14 @@ const MapWithADrawingManager = compose(
             google.maps.drawing.OverlayType.RECTANGLE,
           ],
         },
-        polygonOptions: {
-          fillColor: '#BCDCF9',
-          strokeColor: '#00FFFF',
-          editable: true,
-        },
+        polygonOptions: props.option
+        ,
         polylineOptions: {
           strokeColor: '#00AFFF',
-          //editable: true,
+          editable: true,
         },
         markerOptions: {
+          draggable: true
         },
         rectangleOptions: {
           draggable: true,
@@ -264,9 +328,12 @@ const MapWithADrawingManager = compose(
     </SearchBox>
     {
       props.markers.map((marker, index) =>
-        <Marker key={index} position={marker.position} />
+        <Marker key={index} position={marker.position}
+        />
+
       )
     }
+
     {props.isMarkerShown && <Marker position={props.center} onClick={props.onMarkerClick} />}
   </GoogleMap>
 );
@@ -300,6 +367,7 @@ export default class App extends React.PureComponent {
       temp: arr
     })
   }
+
   querymarker() {
     let arr = []
     db.collection("users").doc("userId").collection("marker").get().then(function (querySnapshot) {
@@ -332,7 +400,6 @@ export default class App extends React.PureComponent {
     )
   }
 
-
   componentDidMount() {
     this.handleClick();
   }
@@ -359,10 +426,14 @@ export default class App extends React.PureComponent {
           temp={this.state.temp}
           tempMarker={this.state.tempMarker}
         /><br /><br />
-        <button onClick={this.handleClick} className="btn btn-info">Find yourself</button><br /><br />
+        {/*
+<button onClick={this.handleClick} className="btn btn-info">Find yourself</button> <br /> <br />
         <button onClick={this.queryPolygon} className="btn btn-success">Get shape</button>
         <button onClick={this.querymarker} className="btn btn-success">Get shape marker</button>
         <button onClick={this.logout} style={{ marginLeft: '25px' }} className="btn btn-primary">Logout</button>
+*/}
+
+
       </div>
     )
   }

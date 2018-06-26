@@ -43,5 +43,45 @@ var jpath =
   ]
         
 
+  //withstate
+  withState('count', 'setCount', 0),
+  withHandlers({
+    incrementCount: props => event => {
+      // props would contain copy prop. 
+      props.setCount(props.count + 1)
+    },
+    otherExample: () => event => {
+      // If you didn't need props in your handler
+    },
+    otherIncrementCountExample: ({ count, setCount }) => () => {
+      // you can exclude event also
+      setCount(count + 1);
+    }
+  }),
+
+
+
+  //switch case for save to arrayOfShapes
+  // switch (OverlayType) {
+          //   case "rectangle": return (
+          //     arrayOfShapes.push({
+          //       "overlayType": OverlayType,
+          //       "coords": Overlay
+          //     })
+          //   );
+
+          //   case "polygon": return (
+          //     console.log("from switch ", OverlayType)
+          //   );
+
+          //   case "polyline": return (
+          //     console.log("from switch ", OverlayType)
+          //   );
+
+          //   case "marker": return (
+          //     console.log("from switch ", OverlayType)
+          //   );
+          //   default: return 0
+          // }
 */
 
