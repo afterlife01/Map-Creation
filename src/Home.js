@@ -8,7 +8,7 @@ import { withScriptjs, withGoogleMap, GoogleMap, Marker, Polygon, Polyline } fro
 import firebase, { db } from "./config/Fire";
 import MapControl from "./components/MapControl";
 import Dock from "./components/Dock";
-import Popup from "reactjs-popup";
+import Modal from './components/Modal'
 
 const _ = require("lodash");
 const {
@@ -22,7 +22,15 @@ const MapWithADrawingManager = compose(
   withProps({
     googleMapURL: "https://maps.googleapis.com/maps/api/js?key=AIzaSyAyesbQMyKVVbBgKVi2g6VX7mop2z96jBo&v=3.exp&libraries=geometry,drawing,places",
     loadingElement: <div style={{ height: `100%` }} />,
-    containerElement: <div style={{ height: `35vw` }} />,
+    containerElement: <div style={{
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+    }} />,
     mapElement: <div style={{ height: `100%` }} />,
     center: { lat: 13.7739718, lng: 100.4852024 },
   }),
@@ -188,7 +196,7 @@ const MapWithADrawingManager = compose(
     defaultZoom={17}
     defaultMapTypeId={"satellite"}
     defaultOptions={{
-      zindex: 0,
+
       fullscreenControl: false,
       mapTypeControlOptions: {
         style: google.maps.MapTypeControlStyle.DROPDOWN_MENU
@@ -209,14 +217,7 @@ const MapWithADrawingManager = compose(
         <button className="btn btn-info" onClick={props.getGeoLocation}>
           Find yourself!
         </button>
-
-        <button className="btn btn-info" onClick={() => console.log("dont try this at home")}>
-          Create plan
-        </button>
-
-        <Popup trigger={<button> Trigger</button>} position="right center">
-          <div>Popup content here !!</div>
-        </Popup>
+        <Modal />
 
       </div>
     </MapControl>
@@ -308,11 +309,8 @@ export default class App extends React.PureComponent {
   }
   render() {
     return (
-      <div>
 
-        <MapWithADrawingManager />
-
-      </div>
+      <MapWithADrawingManager />
     );
   }
 }
