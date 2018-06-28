@@ -1,114 +1,134 @@
 //dont delete /*global google*/ below or you will be done
 /*global google*/
 
-//let จบลูปหาย - var ตรงกันข้าม 
-import React from "react"
-import { compose, withProps, lifecycle, } from "recompose"
-import { withScriptjs, withGoogleMap, GoogleMap, Marker, Polygon, Polyline, } from "react-google-maps"
-import firebase, { db } from './config/Fire';
-import MapControl from './components/MapControl'
+//let จบลูปหาย - var ตรงกันข้าม
+import React from "react";
+import { compose, withProps, lifecycle } from "recompose";
+import { withScriptjs, withGoogleMap, GoogleMap, Marker, Polygon, Polyline } from "react-google-maps";
+import firebase, { db } from "./config/Fire";
+import MapControl from "./components/MapControl";
+import Dock from "./components/Dock";
+import Popup from "reactjs-popup";
 
 const _ = require("lodash");
-const { DrawingManager } = require("react-google-maps/lib/components/drawing/DrawingManager");
-const { SearchBox } = require("react-google-maps/lib/components/places/SearchBox");
+const {
+  DrawingManager
+} = require("react-google-maps/lib/components/drawing/DrawingManager");
+const {
+  SearchBox
+} = require("react-google-maps/lib/components/places/SearchBox");
 
 const MapWithADrawingManager = compose(
   withProps({
-    googleMapURL: "https://maps.googleapis.com/maps/api/js?key=AIzaSyC4R6AN7SmujjPUIGKdyao2Kqitzr1kiRg&v=3.exp&libraries=geometry,drawing,places",
+    googleMapURL: "https://maps.googleapis.com/maps/api/js?key=AIzaSyAyesbQMyKVVbBgKVi2g6VX7mop2z96jBo&v=3.exp&libraries=geometry,drawing,places",
     loadingElement: <div style={{ height: `100%` }} />,
     containerElement: <div style={{ height: `35vw` }} />,
     mapElement: <div style={{ height: `100%` }} />,
+    center: { lat: 13.7739718, lng: 100.4852024 },
   }),
   lifecycle({
     componentDidMount() {
-      const refs = {}
-      let arrayOfShapes = []
+      const refs = {};
+      let arrayOfShapes = [];
 
       this.setState({
         markers: [],
-        testState: {},
-        option: {
-          fillColor: '#BCDCF9',
-          strokeColor: '#FF4500',
-          editable: true,
-        },
+        shapeState: [],
 
         onOverlayQuery: () => {
-          let arr = []
-          db.collection("users")
-            .get().then(function (querySnapshot) {
+
+          let arr = [];
+          db.collection("shapes")
+            .get()
+            .then(function (querySnapshot) {
               querySnapshot.forEach(function (doc) {
-                arr.push(doc.data().arrayOfShapes)
+                arr.push(doc.data());
               });
             });
-          console.log("get data ", arr)
-          
         },
-        onOverlaySave: () => {
 
-          if (arrayOfShapes.length > 0) {
-            this.setState({
+        onOverlaySave: () => {
+          this.setState(
+            {
               testState: arrayOfShapes
-            }, () => {
-              console.log("click!", this.state.testState)
-            })
-            //add coords array to cloud firestore
-            db.collection("users").doc("userId").set({
+            },
+            () => {
+              console.log("click!", this.state.testState);
+            }
+          );
+          //add coords array to cloud firestore
+          db.collection("shapes")
+            .add({
               //add data here
               arrayOfShapes
-            }, { merge: true }).then(function () {
+            })
+            .then(function () {
               console.log("Document successfully written!");
             })
-              .catch(function (error) {
-                console.error("Error writing document: ", error);
-              });
-          }
-          else alert("Has nothing to save!")
-
+            .catch(function (error) {
+              console.error("Error writing document: ", error);
+            });
         },
+        onSquereMetersTrans: () => {
 
-        onOverlayAdd: (overlay) => {
+          //คำนวนพื้นที่เป็นไร งาน ตารางวา - ต้องย้ายไปเป็นฟังก์ชั่นแยกต่างหาก
+          let rnwString = "0 ตารางวา"
+          var rai, ngan, wa, temp1, temp2, area
 
-          var Overlay = overlay.overlay //get overlay object data
-          var OverlayType = overlay.type //get type of overlay
-          var OverlayCoords = []
+          rai = Math.floor(area / 1600)
+          temp1 = area % 1600
+          ngan = Math.floor(temp1 / 400)
+          temp2 = temp1 % 400
+          wa = parseFloat((temp2 / 4).toFixed(3), 10)
+
+          if (rai > 0) {
+            rnwString = ""
+            rnwString = rnwString + rai + " ไร่ "
+          }
+          if (ngan > 0) {
+            rnwString = rnwString + ngan + " งาน "
+          }
+          if (wa > 0) {
+            rnwString = rnwString + wa + " ตารางวา "
+          }
+
+          console.log("พื้นที่คือ ", rnwString)
+        },
+        onOverlayAdd: overlay => {
+          var Overlay = overlay.overlay; //get overlay object data
+          var OverlayType = overlay.type; //get type of overlay
+          var OverlayCoords = [];
 
           if (OverlayType === "polygon" || OverlayType === "polyline") {
             //loop for store LatLng to coords array
 
-            //compute area
-            if (OverlayType === "polygon") {
-              console.log("area is ", google.maps.geometry.spherical.computeArea(Overlay.getPath()), "ตารางเมตร")
-            }
-
-            //compute length 
-            if (OverlayType === "polyline") {
-              console.log("length is ", google.maps.geometry.spherical.computeLength(Overlay.getPath()), "เมตร")
-            }
-
-            Overlay.getPath().forEach(function (value) {
-              OverlayCoords.push({
-                latitude: value.lat(),
-                longitude: value.lng()
-              });
-            });
+            var area = google.maps.geometry.spherical.computeArea(Overlay.getPath())
+            var length = google.maps.geometry.spherical.computeLength(Overlay.getPath())
 
             //push data that can save to firestore to object
+            Overlay.getPath().forEach(function (value) {
+              OverlayCoords.push({
+                lat: value.lat(),
+                lng: value.lng()
+              });
+            });
           }
 
           if (OverlayType === "marker") {
             //push data in to array
             OverlayCoords.push({
-              latitude: Overlay.getPosition().lat(),
-              longitude: Overlay.getPosition().lng()
+              lat: Overlay.getPosition().lat(),
+              lng: Overlay.getPosition().lng()
             });
           }
 
           arrayOfShapes.push({
-            "overlayType": OverlayType,
-            "coords": OverlayCoords
-          })
-          console.log("#overlay in this arr ", arrayOfShapes)
+            OverlayType,
+            OverlayCoords,
+            userId: "userId"
+          });
+
+          console.log("#overlay in this arr ", arrayOfShapes);
         },
 
         onMapMounted: ref => {
@@ -122,92 +142,98 @@ const MapWithADrawingManager = compose(
           const bounds = new google.maps.LatLngBounds();
           places.forEach(place => {
             if (place.geometry.viewport) {
-              bounds.union(place.geometry.viewport)
+              bounds.union(place.geometry.viewport);
             } else {
-              bounds.extend(place.geometry.location)
+              bounds.extend(place.geometry.location);
             }
           });
           const nextMarkers = places.map(place => ({
-            position: place.geometry.location,
+            position: place.geometry.location
           }));
-          const nextCenter = _.get(nextMarkers, '0.position', this.props.center);
+          const nextCenter = _.get(
+            nextMarkers,
+            "0.position",
+            this.props.center
+          );
 
           this.setState({
             center: nextCenter,
-            markers: nextMarkers,
+            markers: nextMarkers
           });
-
         },
-      })
-    },//end of willM
-  }),//end of lifeclycle
 
-  withScriptjs,//end of withScriptjs
-  withGoogleMap,//end of withGoogleMap
-)(props =>
+        getGeoLocation: () => {
+          navigator.geolocation.getCurrentPosition(position => {
+            console.log(position.coords);
+            this.setState({
+              center: {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+              },
+            });
+          });
+        },
+
+      });
+    } //end of willM
+  }), //end of lifeclycle
+
+  withScriptjs, //end of withScriptjs
+  withGoogleMap //end of withGoogleMap
+)(props => (
+
   <GoogleMap
     ref={props.onMapMounted}
     center={props.center}
     defaultZoom={17}
-    defaultMapTypeId={'satellite'}
+    defaultMapTypeId={"satellite"}
     defaultOptions={{
+      zindex: 0,
+      fullscreenControl: false,
       mapTypeControlOptions: {
-        style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
-      },
+        style: google.maps.MapTypeControlStyle.DROPDOWN_MENU
+      }
     }}
   >
     <MapControl
       position={google.maps.ControlPosition.BOTTOM_CENTER}>
       <div>
-        <button className="btn btn-info"
-          onClick={props.onOverlaySave}>
+        <button className="btn btn-info" onClick={props.onOverlaySave}>
           Save!
         </button>
-        <button className="btn btn-info"
-          onClick={props.onOverlayQuery}>
+
+        <button className="btn btn-info" onClick={props.onOverlayQuery}>
           Get shape!
         </button>
+
+        <button className="btn btn-info" onClick={props.getGeoLocation}>
+          Find yourself!
+        </button>
+
+        <button className="btn btn-info" onClick={() => console.log("dont try this at home")}>
+          Create plan
+        </button>
+
+        <Popup trigger={<button> Trigger</button>} position="right center">
+          <div>Popup content here !!</div>
+        </Popup>
+
       </div>
+    </MapControl>
+
+    <MapControl position={google.maps.ControlPosition.TOP_RIGHT}>
+      <Dock />
     </MapControl>
 
     <Polyline />
     {/*set data that get from firestore to overlay eg. draw saved data, overlayOption*/}
-    {
-      props.temp.map(polyCoords => {
-        for (var key in polyCoords) {
-          let polygonObject = []
-          var value = polyCoords[key]
-          for (var key2 in value) {
-            var value2 = value[key2]
-            polygonObject[key2] = { lat: value2.latitude, lng: value2.longitude }
-          }
-          return <Polygon
-            //ref={(ref) => { this.ref = ref; }}
-            path={polygonObject}
-            onClick={() => console.log("poly ob", polygonObject)}
-          />
-        }
-      })
-    }
-    {
-      props.tempMarker.map(markerCoords => () => {
-        for (var key in markerCoords) {
-          let markerObject = {}
-          var value = markerCoords[key]
-          for (var key2 in value) {
-            var value2 = value[key2]
-            markerObject = { lat: value2.latitude, lng: value2.longitude }
-          }
-          return <Marker position={markerObject} />
-        }
-      })
-    }
+
     <DrawingManager
-
-      onOverlayComplete={overlay => {
-        props.onOverlayAdd(overlay)
-      }}
-
+      onOverlayComplete={
+        overlay => {
+          props.onOverlayAdd(overlay);
+        }
+      }
       defaultOptions={{
         drawingControl: true,
         drawingControlOptions: {
@@ -217,14 +243,16 @@ const MapWithADrawingManager = compose(
             google.maps.drawing.OverlayType.POLYGON,
             google.maps.drawing.OverlayType.POLYLINE,
             google.maps.drawing.OverlayType.MARKER,
-            google.maps.drawing.OverlayType.RECTANGLE,
-          ],
+            google.maps.drawing.OverlayType.RECTANGLE
+          ]
         },
-        polygonOptions: props.option
-        ,
+        polygonOptions: {
+          strokeColor: "#ff8000",
+          editable: true
+        },
         polylineOptions: {
-          strokeColor: '#00AFFF',
-          editable: true,
+          strokeColor: "#ff8000",
+          editable: true
         },
         markerOptions: {
           draggable: true
@@ -233,9 +261,7 @@ const MapWithADrawingManager = compose(
           draggable: true,
           editable: true
         }
-      }
-
-      }
+      }}
     />
     <SearchBox
       ref={props.onSearchBoxMounted}
@@ -256,21 +282,18 @@ const MapWithADrawingManager = compose(
           boxShadow: `0 2px 6px rgba(0, 0, 0, 0.3)`,
           fontSize: `14px`,
           outline: `none`,
-          textOverflow: `ellipses`,
+          textOverflow: `ellipses`
         }}
       />
     </SearchBox>
     {
-      props.markers.map((marker, index) =>
-        <Marker key={index} position={marker.position}
-        />
-
-      )
+      props.markers.map((marker, index) => (
+        <Marker key={index} position={marker.position} />
+      ))
     }
 
-    {props.isMarkerShown && <Marker position={props.center} onClick={props.onMarkerClick} />}
   </GoogleMap>
-);
+));
 
 
 
@@ -278,70 +301,18 @@ export default class App extends React.PureComponent {
   constructor(props) {
     super(props);
     this.logout = this.logout.bind(this);
-    this.handleClick = this.handleClick.bind(this);
-    this.state = {
-      currentLatLng: {
-        lat: 13.652383, lng: 100.493872
-      },
-      isMarkerShown: true,
-      temp: [],
-      tempMarker: [],
-    }
   }
-
-  handleClick() {
-    this.getGeoLocation();
-    this.handleMarkerClick();
-    this.handleMarkerClick2();
-  }
-  getGeoLocation = () => {
-    navigator.geolocation.getCurrentPosition(
-      position => {
-        console.log(position.coords);
-        this.setState(prevState => ({
-          center: {
-            ...prevState.center,
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          }
-        }))
-      }
-    )
-  }
-
-  componentDidMount() {
-    this.handleClick();
-  }
-  handleMarkerClick2 = () => {
-    setTimeout(() => {
-      this.setState({ isMarkerShown: false })
-    }, 5000)
-  }
-
   logout() {
     firebase.auth().signOut();
     this.setState({ user: null });
   }
-  handleMarkerClick = () => {
-    this.setState({ isMarkerShown: true })
-  }
   render() {
-
     return (
       <div>
-        <MapWithADrawingManager
-          center={this.state.center}
-          isMarkerShown={this.state.isMarkerShown}
-          temp={this.state.temp}
-          tempMarker={this.state.tempMarker}
-        /><br /><br />
-        {/*
-<button onClick={this.handleClick} className="btn btn-info">Find yourself</button> <br /> <br />
-      
-*/}
 
-        <button onClick={this.logout} style={{ marginLeft: '25px' }} className="btn btn-primary">Logout</button>
+        <MapWithADrawingManager />
+
       </div>
-    )
+    );
   }
 }

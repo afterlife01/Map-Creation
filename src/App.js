@@ -3,40 +3,41 @@ import firebase from './config/Fire';
 import Login from './Login';
 import Home from './Home';
 import './App.css';
+import Dock from './components/Dock';
 
 class App extends Component {
-  
-  constructor(props){
+
+  constructor(props) {
     super(props);
     this.state = {
-      user: null ,
+      user: null,
     }
   }
 
-  componentDidMount(){
+  componentDidMount() {
     this.authListener();
   }
 
   authListener() {
     firebase.auth().onAuthStateChanged((user) => {
-      
+
       if (user) {
-        this.setState({user});
-       
+        this.setState({ user });
+
       }
       else {
-        this.setState({user : null});
-       
+        this.setState({ user: null });
+
       }
     });
   }
 
   render() {
-    
+
     return (
       <div className="App">
-        {this.state.user ? (<Home/>) : (<Login/>)}
-      </div> 
+        {this.state.user ? (<Home />) : (<Login />)}
+      </div>
     );
   }
 }

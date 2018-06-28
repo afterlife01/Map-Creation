@@ -83,5 +83,89 @@ var jpath =
           //   );
           //   default: return 0
           // }
+
+
+          onPolygonComplete={polygon => {
+
+        // var polyCoords = []
+        // //loop for store LatLng to coords array
+        // polygon.getPath().forEach(function (value) {
+        //   console.log(value.lat(), value.lng());
+        //   polyCoords.push({
+        //     latitude: value.lat(),
+        //     longitude: value.lng()
+        //   });
+        // });
+        // console.log("pcoords", polyCoords)
+
+        // //add coords array to cloud firestore
+        // db.collection("users").doc("userId").collection("polygon").add({
+        //   //add data here
+        //   polyCoords,
+        // }).then(function () {
+        //   console.log("Document successfully written!");
+        // })
+        //   .catch(function (error) {
+        //     console.error("Error writing document: ", error);
+        //   });
+      }
+      }
+
+
+
+      แปลงตารางเมตรเป็นไร่
+      ตัวอย่าง แปลงเนื้อที่ 7,321 ตารางเมตรเป็น ไร่ — งาน — ตารางวา
+
+A. ไร่ = Shape_Area/1600 = 7,321/1,600 = 4 เศษ 921 ไร่
+
+B. งาน = เศษที่ได้จาก A. /400 = 921/400 = 2 เศษ 121 งาน
+
+C.ตารางวา = เศษที่ได้จาก B /4 = 121/4 = 30.25 ตารางวา
+
+สรุป 7,321 ตารางเมตร = 4 ไร่ 2 งาน 30.25 ตารางวา
+
+
+
+//compute area
+            if (OverlayType === "polygon") {
+              console.log(
+                "area is ",
+                area,
+              );
+            }
+
+            //compute length
+            if (OverlayType === "polyline") {
+              console.log(
+                "length is ",
+                length,
+                "เมตร"
+              );
+            }
+
+
+
+            {temp.map(polyCoords => {
+      for (var key in polyCoords) {
+        let polygonObject = [];
+        var value = polyCoords[key];
+        for (var key2 in value) {
+          var value2 = value[key2];
+          polygonObject[key2] = { lat: value2.latitude, lng: value2.longitude };
+        }
+        return;
+      }
+    })}
+    {tempMarker.map(markerCoords => () => {
+      for (var key in markerCoords) {
+        let markerObject = {};
+        var value = markerCoords[key];
+        for (var key2 in value) {
+          var value2 = value[key2];
+          markerObject = { lat: value2.latitude, lng: value2.longitude };
+        }
+        return;
+      }
+    })}
 */
 
