@@ -4,14 +4,7 @@
 // let จบลูปหาย - var ตรงกันข้าม
 import React from 'react'
 import { compose, withProps, lifecycle } from 'recompose'
-import {
-  withScriptjs,
-  withGoogleMap,
-  GoogleMap,
-  Marker,
-  Polygon,
-  Polyline
-} from 'react-google-maps'
+import { withScriptjs, withGoogleMap, GoogleMap, Marker, Polygon, Polyline } from 'react-google-maps'
 import { db } from './config/Fire'
 import MapControl from './components/MapControl'
 import Dock from './components/Dock'
@@ -48,11 +41,21 @@ const MapWithADrawingManager = compose(
       let arrayOfShapes = []
 
       this.setState({
-        markers: [],
-        shapeState: [],
-        planId: '',
-        planName: '',
-        stateRedraw: [],
+        markers: [], //for mark search position
+        shapeState: [], //store overlay data
+        planId: '', // plan Id for show on screen and use for save to firestore
+        planName: '', //plan name for show on screen
+        stateRedraw: [], //store overlay data that get from firestore
+        polygonOptions: {
+          strokeColor: '#ff751a',
+          fillColor: '#ffc266',
+        }, //option for overlay eg. strokeColor,fillColor, icon
+        polylineOptions: {
+          strokeColor: '#ff751a',
+        }, //same as above
+        markerOptions: {
+
+        }, //same as above
 
         onOverlaySave: () => {
           this.setState(
@@ -71,7 +74,8 @@ const MapWithADrawingManager = compose(
 
               overlayCoords: value['OverlayCoords'],
               overlayType: value['OverlayType'],
-              planId: value['planId']
+              planId: value['planId'],
+              overlayOptions: value['overlayOptions']
 
             }).catch(function (error) {
               console.error('Error writing document: ', error)
@@ -79,10 +83,10 @@ const MapWithADrawingManager = compose(
           }
         },
 
-        onSquereMetersTrans: () => {
+        onSquereMetersTrans: area => {
           // คำนวนพื้นที่เป็นไร งาน ตารางวา - ต้องย้ายไปเป็นฟังก์ชั่นแยกต่างหาก
           let rnwString = '0 ตารางวา'
-          var rai, ngan, wa, temp1, temp2, area
+          var rai, ngan, wa, temp1, temp2
 
           rai = Math.floor(area / 1600)
           temp1 = area % 1600
@@ -101,7 +105,7 @@ const MapWithADrawingManager = compose(
             rnwString = rnwString + wa + ' ตารางวา '
           }
 
-          console.log('พื้นที่คือ ', rnwString)
+          return console.log('พื้นที่คือ ', rnwString)
         },
 
         onOverlayAdd: overlay => {
@@ -112,9 +116,9 @@ const MapWithADrawingManager = compose(
           if (OverlayType === 'polygon' || OverlayType === 'polyline') {
             // loop for store LatLng to coords array
 
-            var area = google.maps.geometry.spherical.computeArea(
-              Overlay.getPath()
-            )
+            var area = google.maps.geometry.spherical.computeArea(Overlay.getPath())
+            this.state.onSquereMetersTrans(area)
+
             var length = google.maps.geometry.spherical.computeLength(
               Overlay.getPath()
             )
@@ -134,12 +138,18 @@ const MapWithADrawingManager = compose(
               lng: Overlay.getPosition().lng()
             })
           }
-
+          var overlayOptions = {}
+          if (OverlayType === 'polygon') {
+            overlayOptions = this.state.polygonOptions
+          }
+          if (OverlayType === 'polyline') {
+            overlayOptions = this.state.polylineOptions
+          }
           arrayOfShapes.push({
             OverlayType,
             OverlayCoords,
             planId: this.state.planId,
-
+            overlayOptions
           })
 
           console.log('#overlay in this arr ', arrayOfShapes)
@@ -296,22 +306,11 @@ const MapWithADrawingManager = compose(
             google.maps.drawing.OverlayType.MARKER,
           ]
         },
-        polygonOptions: {
-          strokeColor: '#ff8000',
-          editable: true,
-          geodesic: true
-        },
-        polylineOptions: {
-          strokeColor: '#ff8000',
-          editable: true
-        },
+        polygonOptions: props.polygonOptions,
+        polylineOptions: props.polylineOptions,
         markerOptions: {
-          draggable: true
+          animation: google.maps.Animation.DROP,
         },
-        rectangleOptions: {
-          draggable: true,
-          editable: true
-        }
       }}
     />
     <SearchBox
@@ -338,7 +337,9 @@ const MapWithADrawingManager = compose(
       />
     </SearchBox>
     {props.markers.map((marker, index) => (
-      <Marker key={index} position={marker.position} />
+      <Marker key={index} position={marker.position}
+        animation={google.maps.Animation.BOUNCE}
+      />
     ))}
 
   </GoogleMap>

@@ -30,8 +30,6 @@ export default class DockMap extends Component {
     this.setState({
       planData: arr
     })
-
-    
   }
 
   logout() {
@@ -91,7 +89,7 @@ export default class DockMap extends Component {
             })}
           </ul>
 
-          <button className='btn btn-submit' onClick={this.logout}>
+          <button className='btn btn-success' onClick={this.logout}>
             Logout
           </button>
         </Dock>
