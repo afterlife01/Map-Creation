@@ -16,7 +16,6 @@ import { db } from './config/Fire'
 import MapControl from './components/MapControl'
 import Dock from './components/Dock'
 import Modal from './components/Modal'
-import planIdToMap from './components/Dock'
 
 const _ = require('lodash')
 const {
@@ -30,65 +29,50 @@ const MapWithADrawingManager = compose(
   withProps({
     googleMapURL: 'https://maps.googleapis.com/maps/api/js?key=AIzaSyAyesbQMyKVVbBgKVi2g6VX7mop2z96jBo&v=3.exp&libraries=geometry,drawing,places',
     loadingElement: <div style={{ height: `100%` }} />,
-    containerElement: (
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          justifyContent: 'flex-end',
-          alignItems: 'center'
-        }}
-      />
-    ),
+    containerElement:
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: 'flex-end',
+        alignItems: 'center'
+      }} />,
     mapElement: <div style={{ height: `100%` }} />,
     center: { lat: 13.7739718, lng: 100.4852024 }
   }),
   lifecycle({
-    componentDidMount () {
+    componentDidMount() {
       const refs = {}
       let arrayOfShapes = []
-
-      const planData = this.props.planData
 
       this.setState({
         markers: [],
         shapeState: [],
-
-        onOverlayQuery: () => {
-          let arr = []
-          db.collection('shapes').get().then(function (querySnapshot) {
-            querySnapshot.forEach(function (doc) {
-              arr.push(doc.data())
-            })
-          })
-        },
+        planId: '',
+        justpath: [],
 
         onOverlaySave: () => {
           this.setState(
             {
               shapeState: arrayOfShapes
-            },
-            () => {
-              console.log('click!', this.state.shapeState)
-            }
-          )
-          // add coords array to cloud firestore
-          db
-            .collection('shapes')
-            .add({
+            }, () => { console.log('click!', this.state.shapeState) })
+
+          for (var key in arrayOfShapes) {
+            var value = arrayOfShapes[key]
+            // add coords array to cloud firestore
+            db.collection('shapes').add({
               // add data here
-              arrayOfShapes
-            })
-            .then(function () {
-              console.log('Document successfully written!')
-            })
-            .catch(function (error) {
+              value
+            }).then(function () {
+              alert('Document successfully written!')
+            }).catch(function (error) {
               console.error('Error writing document: ', error)
-            })
+            });
+          }
         },
+
         onSquereMetersTrans: () => {
           // คำนวนพื้นที่เป็นไร งาน ตารางวา - ต้องย้ายไปเป็นฟังก์ชั่นแยกต่างหาก
           let rnwString = '0 ตารางวา'
@@ -113,6 +97,7 @@ const MapWithADrawingManager = compose(
 
           console.log('พื้นที่คือ ', rnwString)
         },
+
         onOverlayAdd: overlay => {
           var Overlay = overlay.overlay // get overlay object data
           var OverlayType = overlay.type // get type of overlay
@@ -127,7 +112,6 @@ const MapWithADrawingManager = compose(
             var length = google.maps.geometry.spherical.computeLength(
               Overlay.getPath()
             )
-
             // push data that can save to firestore to object
             Overlay.getPath().forEach(function (value) {
               OverlayCoords.push({
@@ -148,7 +132,8 @@ const MapWithADrawingManager = compose(
           arrayOfShapes.push({
             OverlayType,
             OverlayCoords,
-            planId: 'planId'
+            planId: this.state.planId,
+
           })
 
           console.log('#overlay in this arr ', arrayOfShapes)
@@ -157,9 +142,11 @@ const MapWithADrawingManager = compose(
         onMapMounted: ref => {
           refs.map = ref
         },
+
         onSearchBoxMounted: ref => {
           refs.searchBox = ref
         },
+
         onPlacesChanged: () => {
           const places = refs.searchBox.getPlaces()
           const bounds = new google.maps.LatLngBounds()
@@ -182,9 +169,9 @@ const MapWithADrawingManager = compose(
         },
 
         getGeoLocation: () => {
-          
           navigator.geolocation.getCurrentPosition(position => {
-            position
+            console.log(position.coords)
+
             this.setState({
               center: {
                 lat: position.coords.latitude,
@@ -192,7 +179,30 @@ const MapWithADrawingManager = compose(
               }
             })
           })
-        }
+        },
+
+        onOverlayQuery: (planData) => {
+
+          var planName = planData['planName']['planName']
+          var planId = planData['planId']
+          let arr = []
+
+          this.setState({
+            planId: planId
+          })
+
+          db.collection('shapes').where('value.planId', '==', planId).get().then(function (querySnapshot) {
+            querySnapshot.forEach(function (doc) {
+              arr.push(doc.data().value)
+            })
+          })
+
+
+          for (var key in arr) {
+            var value = arr[key]
+            console.log("dd", value)
+          }
+        },
       })
     } // end of Did M
   }), // end of lifeclycle
@@ -217,25 +227,27 @@ const MapWithADrawingManager = compose(
           Save!
         </button>
 
-        <button className='btn btn-info' onClick={props.onOverlayQuery}>
-          Get shape!
-        </button>
-
         <button className='btn btn-info' onClick={props.getGeoLocation}>
           Find yourself!
         </button>
         <Modal />
-
       </div>
     </MapControl>
 
     <MapControl position={google.maps.ControlPosition.TOP_RIGHT}>
       <Dock
-      // planData={this.state.planData}
+        onOverlayQuery={props.onOverlayQuery}
       />
     </MapControl>
 
-    <Polyline />
+    <Polyline
+
+    />
+    <Polygon
+
+    />
+    <Marker
+    />
     {/* set data that get from firestore to overlay eg. draw saved data, overlayOption */}
 
     <DrawingManager
@@ -251,7 +263,6 @@ const MapWithADrawingManager = compose(
             google.maps.drawing.OverlayType.POLYGON,
             google.maps.drawing.OverlayType.POLYLINE,
             google.maps.drawing.OverlayType.MARKER,
-            google.maps.drawing.OverlayType.RECTANGLE
           ]
         },
         polygonOptions: {
@@ -303,7 +314,11 @@ const MapWithADrawingManager = compose(
 ))
 
 export default class App extends React.PureComponent {
-  render () {
-    return <MapWithADrawingManager />
+  render() {
+    return (
+      <div>
+        <MapWithADrawingManager />
+      </div>
+    )
   }
 }

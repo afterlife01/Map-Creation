@@ -4,17 +4,19 @@ import firebase, { db } from '../config/Fire'
 import '../CSSStyle/Dock.css'
 
 export default class DockMap extends Component {
-  constructor (props) {
+  constructor(props) {
     super(props)
     this.logout = this.logout.bind(this)
     this.onShowClick = this.onShowClick.bind(this)
+    this.onListClick = this.onListClick.bind(this)
+
     this.state = {
       isVisible: false,
-      planData: []
+      planData: [],
     }
   }
 
-  componentDidMount () {
+  componentDidMount() {
     // get all plan list from frirestore
     let arr = []
     db.collection('plan').get().then(function (querySnapshot) {
@@ -30,27 +32,28 @@ export default class DockMap extends Component {
     })
   }
 
-  logout () {
+  logout() {
     firebase.auth().signOut()
     this.setState({ user: null })
   }
 
-  onShowClick () {
+  onShowClick() {
     this.setState({
       isVisible: !this.state.isVisible
     })
   }
 
-  onListClick (planId) {
-    // pass props to map and then close dock
-    console.log('list click!', planId)
+  onListClick(planData) {
+    // pass props planIdForMap to map and then close dock
+
+    this.props.onOverlayQuery(planData)
 
     this.setState({
       isVisible: !this.state.isVisible
     })
   }
 
-  render () {
+  render() {
     return (
       <div>
         <button className='btn btn-info' onClick={this.onShowClick}>
@@ -78,7 +81,7 @@ export default class DockMap extends Component {
                 <li
                   className='li'
                   key={value['planId']}
-                  onClick={() => this.onListClick(value['planId'])}
+                  onClick={() => this.onListClick(value)}
                 >
                   {value['planName']['planName']}
                 </li>
