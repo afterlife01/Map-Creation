@@ -1,17 +1,19 @@
 import React from "react";
 import Popup from "reactjs-popup";
 import { Form, Text } from 'react-form';
-import { db } from "../config/Fire";
+import firebase, { db } from "../config/Fire";
 
 export default class Modal extends React.Component {
     constructor(props) {
 
         super(props);
+
         this.onSaveToFireStore = this.onSaveToFireStore.bind(this)
         this.state = {
-            inputValue: ''
+            inputValue: '',
         }
     }
+
     onSaveToFireStore() {
         var planName = this.state.inputValue
         if (planName === '') {
@@ -37,7 +39,6 @@ export default class Modal extends React.Component {
 
     }
 
-
     render() {
         return (
             <Popup
@@ -50,6 +51,7 @@ export default class Modal extends React.Component {
                         <button type="submit" className="btn btn-primary" onClick={this.onSaveToFireStore}>Submit</button>
                     </div>
                 </Form>
+
             </Popup>
 
         );

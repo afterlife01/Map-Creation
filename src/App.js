@@ -3,7 +3,6 @@ import firebase from './config/Fire';
 import Login from './Login';
 import Home from './Home';
 import './App.css';
-import Dock from './components/Dock';
 
 class App extends Component {
 
