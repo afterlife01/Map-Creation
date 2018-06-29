@@ -30,6 +30,8 @@ export default class DockMap extends Component {
     this.setState({
       planData: arr
     })
+
+    
   }
 
   logout() {

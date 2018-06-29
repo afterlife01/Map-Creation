@@ -51,7 +51,8 @@ const MapWithADrawingManager = compose(
         markers: [],
         shapeState: [],
         planId: '',
-        justpath: [],
+        planName: '',
+        stateRedraw: [],
 
         onOverlaySave: () => {
           this.setState(
@@ -59,14 +60,19 @@ const MapWithADrawingManager = compose(
               shapeState: arrayOfShapes
             }, () => { console.log('click!', this.state.shapeState) })
 
+          var shapeId = this.state.planId
+          console.log("id", shapeId)
           for (var key in arrayOfShapes) {
             var value = arrayOfShapes[key]
+            console.log("value", value['OverlayType'])
             // add coords array to cloud firestore
             db.collection('shapes').add({
               // add data here
-              value
-            }).then(function () {
-              alert('Document successfully written!')
+
+              overlayCoords: value['OverlayCoords'],
+              overlayType: value['OverlayType'],
+              planId: value['planId']
+
             }).catch(function (error) {
               console.error('Error writing document: ', error)
             });
@@ -171,7 +177,6 @@ const MapWithADrawingManager = compose(
         getGeoLocation: () => {
           navigator.geolocation.getCurrentPosition(position => {
             console.log(position.coords)
-
             this.setState({
               center: {
                 lat: position.coords.latitude,
@@ -182,26 +187,29 @@ const MapWithADrawingManager = compose(
         },
 
         onOverlayQuery: (planData) => {
-
+          var self = this;
           var planName = planData['planName']['planName']
           var planId = planData['planId']
           let arr = []
 
           this.setState({
-            planId: planId
+            planId: planId,
+            planName: planName
           })
 
-          db.collection('shapes').where('value.planId', '==', planId).get().then(function (querySnapshot) {
+          db.collection('shapes').where('planId', '==', planId).get().then(function (querySnapshot) {
             querySnapshot.forEach(function (doc) {
-              arr.push(doc.data().value)
+              arr.push({
+                shapeData: doc.data(),
+                shapeId: doc.id
+              })
+            })
+            console.log("user for create overlay", arr, planId)
+            self.setState({
+              stateRedraw: arr
             })
           })
 
-
-          for (var key in arr) {
-            var value = arr[key]
-            console.log("dd", value)
-          }
         },
       })
     } // end of Did M
@@ -230,6 +238,9 @@ const MapWithADrawingManager = compose(
         <button className='btn btn-info' onClick={props.getGeoLocation}>
           Find yourself!
         </button>
+        <button className='btn btn-danger' >
+          My name is {props.planName}
+        </button>
         <Modal />
       </div>
     </MapControl>
@@ -240,15 +251,35 @@ const MapWithADrawingManager = compose(
       />
     </MapControl>
 
-    <Polyline
 
-    />
-    <Polygon
+    {props.stateRedraw.map(value => { //redraw all overlay
+      //redraw polygon
+      if (value['shapeData']['overlayType'] === 'polygon') {
+        return (
+          <Polygon
+            path={value['shapeData']['overlayCoords']}
+            key={value['shapeId']}
+          />)
+      }
+      //redraw polyline
+      if (value['shapeData']['overlayType'] === 'polyline') {
+        return (
+          <Polyline
+            path={value['shapeData']['overlayCoords']}
+            key={value['shapeId']}
+          />)
+      }
+      //redraw marker
+      if (value['shapeData']['overlayType'] === 'marker') {
+        return (
+          <Marker
+            position={value['shapeData']['overlayCoords']['0']}
+            key={value['shapeId']}
+          />)
 
-    />
-    <Marker
-    />
-    {/* set data that get from firestore to overlay eg. draw saved data, overlayOption */}
+      }
+
+    })}
 
     <DrawingManager
       onOverlayComplete={overlay => {
