@@ -10,7 +10,6 @@ import MapControl from './components/MapControl'
 import Dock from './components/Dock'
 import Modal from './components/Modal'
 
-
 var jpath =
   [
     { lat: 13.7739818, lng: 100.546488 },
@@ -19,6 +18,8 @@ var jpath =
     { lat: 35.5396, lng: 134.2609 },
     { lat: 35.5460, lng: 134.2622 },
   ]
+
+
 const _ = require('lodash')
 const {
   DrawingManager
@@ -45,10 +46,12 @@ const MapWithADrawingManager = compose(
     center: { lat: 13.7739718, lng: 100.4852024 }
   }),
   lifecycle({
+    componentWillMount() {
+    },
+
     componentDidMount() {
       const refs = {}
       let arrayOfShapes = []
-
       this.setState({
         markers: [], //for mark search position
         overlayState: [], //store overlay data
@@ -127,61 +130,70 @@ const MapWithADrawingManager = compose(
 
         //add finished overlay to arrayOfShapes
         onOverlayAdd: overlay => {
-          var Overlay = overlay.overlay // get overlay object data
-          var OverlayType = overlay.type // get type of overlay
-          var OverlayCoords = []
+          var overlayObject = overlay.overlay // get overlay object data
+          var overlayType = overlay.type // get type of overlay
+          var overlayCoords = []
 
-          if (OverlayType === 'polygon') {
+          if (overlayType === 'polygon') {
             // loop for store LatLng to coords array
+            console.log(overlayObject.getPath(), 'raw')
 
-            this.state.onSquereMetersTrans(Overlay)
+            this.state.onSquereMetersTrans(overlayObject)
 
-            this.state.addListenerOnPolygon(Overlay)
+            google.maps.event.addListener(overlayObject, 'rightclick', function (event) {
+              console.log("in add", overlayObject)
+            })
+
+            //this.state.addListenerOnPolygon(overlayObject)
 
             // push data that can save to firestore to object
-            Overlay.getPath().forEach(function (value) {
-              OverlayCoords.push({
+            overlayObject.getPath().forEach(function (value) {
+              overlayCoords.push({
                 lat: value.lat(),
                 lng: value.lng()
               })
             })
           }
 
-          if (OverlayType === 'polyline') {
-            this.state.onPolylineLengthCompute(Overlay)
+          if (overlayType === 'polyline') {
+            this.state.onPolylineLengthCompute(overlayObject)
             // push data that can save to firestore to object
-            Overlay.getPath().forEach(function (value) {
-              OverlayCoords.push({
+            overlayObject.getPath().forEach(function (value) {
+              overlayCoords.push({
                 lat: value.lat(),
                 lng: value.lng()
               })
             })
           }
 
-          if (OverlayType === 'marker') {
+          if (overlayType === 'marker') {
             // push data in to array
-            OverlayCoords.push({
-              lat: Overlay.getPosition().lat(),
-              lng: Overlay.getPosition().lng()
+            overlayCoords.push({
+              lat: overlayObject.getPosition().lat(),
+              lng: overlayObject.getPosition().lng()
             })
           }
+
           var overlayOptions = {}
-          if (OverlayType === 'polygon') {
+          if (overlayType === 'polygon') {
             overlayOptions = this.state.polygonOptions
           }
-          if (OverlayType === 'polyline') {
+          if (overlayType === 'polyline') {
             overlayOptions = this.state.polylineOptions
           }
 
+          var overlayId = arrayOfShapes.length
+
           arrayOfShapes.push({
-            OverlayType,
-            OverlayCoords,
+            overlayType,
+            overlayCoords,
             planId: this.state.planId,
-            overlayOptions
+            overlayOptions,
+            overlayId
           })
           this.setState({
             overlayState: arrayOfShapes
-          }, () => console.log('#overlay in this arr ', this.state.overlayState))
+          }, () => console.log('#overlay in this overlayState ', this.state.overlayState))
 
         },
 
@@ -214,18 +226,6 @@ const MapWithADrawingManager = compose(
           })
         },
 
-        getGeoLocation: () => {
-          navigator.geolocation.getCurrentPosition(position => {
-            console.log(position.coords)
-            this.setState({
-              center: {
-                lat: position.coords.latitude,
-                lng: position.coords.longitude
-              }
-            })
-          })
-        },
-
         onOverlayQuery: (planData) => {
           var self = this;
           var planName = planData['planName']['planName']
@@ -253,10 +253,24 @@ const MapWithADrawingManager = compose(
         },
 
         addListenerOnPolygon: (polygon) => {
-          google.maps.event.addListener(polygon, 'click', function (event) {
-            console.log(polygon.getPath().clear());
+          var self = this
+          google.maps.event.addListener(polygon, 'rightclick', function (event) {
+            console.log(polygon)
+            console.log(self.state.overlayState, 'from listener')
           });
-        }
+        },
+        getGeoLocation: () => {
+          navigator.geolocation.getCurrentPosition(position => {
+            console.log(position.coords)
+            this.setState({
+              center: {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+                zoom: 17
+              }
+            })
+          })
+        },
       })
     } // end of Did M
   }), // end of lifeclycle
@@ -267,19 +281,15 @@ const MapWithADrawingManager = compose(
     ref={props.onMapMounted}
     center={props.center}
     defaultZoom={17}
+
     defaultMapTypeId={'satellite'}
     defaultOptions={{
       fullscreenControl: false,
       mapTypeControlOptions: {
         style: google.maps.MapTypeControlStyle.DROPDOWN_MENU
       }
-    }}
-  >
-    <Polygon
+    }}>
 
-
-
-    />
     <MapControl position={google.maps.ControlPosition.BOTTOM_CENTER}>
       <div>
         <button className='btn btn-info' onClick={props.onOverlaySave}>
@@ -301,13 +311,12 @@ const MapWithADrawingManager = compose(
         onOverlayQuery={props.onOverlayQuery}
       />
     </MapControl>
-
-
     {props.stateRedraw.map(value => { //redraw all overlay
 
       var overlayType = value['overlayData']['overlayType']
       var overlayCoords = value['overlayData']['overlayCoords']
       var overlayId = value['overlayId']
+      var overlayOptions = value['overlayData']['overlayOptions']
 
       //redraw polygon
       if (overlayType === 'polygon') {
@@ -315,9 +324,10 @@ const MapWithADrawingManager = compose(
         return (
           <Polygon
 
+            defaultOptions={overlayOptions}
             paths={overlayCoords}
             key={overlayId}
-
+            onClick={() => console.log(overlayId)}
           />
         )
       }
@@ -326,7 +336,7 @@ const MapWithADrawingManager = compose(
       if (overlayType === 'polyline') {
         return (
           <Polyline
-
+            defaultOptions={overlayOptions}
             path={overlayCoords}
             key={overlayId}
           />)
@@ -335,16 +345,17 @@ const MapWithADrawingManager = compose(
       if (overlayType === 'marker') {
         return (
           <Marker
-
             position={overlayCoords['0']} //marker need just an array of latlng
             key={overlayId}
-          />)
-
+          />
+        )
       }
 
-    })}
+    })
+    }
 
     <DrawingManager
+
       onOverlayComplete={overlay => {
         props.onOverlayAdd(overlay)
       }}
