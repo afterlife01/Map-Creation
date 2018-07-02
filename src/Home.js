@@ -10,6 +10,15 @@ import MapControl from './components/MapControl'
 import Dock from './components/Dock'
 import Modal from './components/Modal'
 
+
+var jpath =
+  [
+    { lat: 13.7739818, lng: 100.546488 },
+    { lat: 13.5544, lng: 134.2465 },
+    { lat: 13.7268122, lng: 100.5802612999 },
+    { lat: 35.5396, lng: 134.2609 },
+    { lat: 35.5460, lng: 134.2622 },
+  ]
 const _ = require('lodash')
 const {
   DrawingManager
@@ -42,13 +51,14 @@ const MapWithADrawingManager = compose(
 
       this.setState({
         markers: [], //for mark search position
-        shapeState: [], //store overlay data
+        overlayState: [], //store overlay data
         planId: '', // plan Id for show on screen and use for save to firestore
         planName: '', //plan name for show on screen
         stateRedraw: [], //store overlay data that get from firestore
         polygonOptions: {
           strokeColor: '#ff751a',
           fillColor: '#ffc266',
+          paths: jpath
         }, //option for overlay eg. strokeColor,fillColor, icon
         polylineOptions: {
           strokeColor: '#ff751a',
@@ -60,8 +70,8 @@ const MapWithADrawingManager = compose(
         onOverlaySave: () => {
           this.setState(
             {
-              shapeState: arrayOfShapes
-            }, () => { console.log('click!', this.state.shapeState) })
+              overlayState: arrayOfShapes
+            }, () => { console.log('click!', this.state.overlayState) })
 
           var shapeId = this.state.planId
           console.log("id", shapeId)
@@ -83,9 +93,11 @@ const MapWithADrawingManager = compose(
           }
         },
 
-        onSquereMetersTrans: area => {
+        onSquereMetersTrans: polygon => {
+
           // คำนวนพื้นที่เป็นไร งาน ตารางวา - ต้องย้ายไปเป็นฟังก์ชั่นแยกต่างหาก
-          let rnwString = '0 ตารางวา'
+          var area = google.maps.geometry.spherical.computeArea(polygon.getPath())
+          let rnwString = ''
           var rai, ngan, wa, temp1, temp2
 
           rai = Math.floor(area / 1600)
@@ -104,24 +116,39 @@ const MapWithADrawingManager = compose(
           if (wa > 0) {
             rnwString = rnwString + wa + ' ตารางวา '
           }
+          else { rnwString = '0 ตารางวา' }
 
           return console.log('พื้นที่คือ ', rnwString)
         },
+        onPolylineLengthCompute: polyline => {
+          var length = google.maps.geometry.spherical.computeLength(polyline.getPath())
+          return console.log('ความยาวรวม', length, 'เมตร')
+        },
 
+        //add finished overlay to arrayOfShapes
         onOverlayAdd: overlay => {
           var Overlay = overlay.overlay // get overlay object data
           var OverlayType = overlay.type // get type of overlay
           var OverlayCoords = []
 
-          if (OverlayType === 'polygon' || OverlayType === 'polyline') {
+          if (OverlayType === 'polygon') {
             // loop for store LatLng to coords array
 
-            var area = google.maps.geometry.spherical.computeArea(Overlay.getPath())
-            this.state.onSquereMetersTrans(area)
+            this.state.onSquereMetersTrans(Overlay)
 
-            var length = google.maps.geometry.spherical.computeLength(
-              Overlay.getPath()
-            )
+            this.state.addListenerOnPolygon(Overlay)
+
+            // push data that can save to firestore to object
+            Overlay.getPath().forEach(function (value) {
+              OverlayCoords.push({
+                lat: value.lat(),
+                lng: value.lng()
+              })
+            })
+          }
+
+          if (OverlayType === 'polyline') {
+            this.state.onPolylineLengthCompute(Overlay)
             // push data that can save to firestore to object
             Overlay.getPath().forEach(function (value) {
               OverlayCoords.push({
@@ -145,14 +172,17 @@ const MapWithADrawingManager = compose(
           if (OverlayType === 'polyline') {
             overlayOptions = this.state.polylineOptions
           }
+
           arrayOfShapes.push({
             OverlayType,
             OverlayCoords,
             planId: this.state.planId,
             overlayOptions
           })
+          this.setState({
+            overlayState: arrayOfShapes
+          }, () => console.log('#overlay in this arr ', this.state.overlayState))
 
-          console.log('#overlay in this arr ', arrayOfShapes)
         },
 
         onMapMounted: ref => {
@@ -210,8 +240,8 @@ const MapWithADrawingManager = compose(
           db.collection('shapes').where('planId', '==', planId).get().then(function (querySnapshot) {
             querySnapshot.forEach(function (doc) {
               arr.push({
-                shapeData: doc.data(),
-                shapeId: doc.id
+                overlayData: doc.data(),
+                overlayId: doc.id
               })
             })
             console.log("user for create overlay", arr, planId)
@@ -221,6 +251,12 @@ const MapWithADrawingManager = compose(
           })
 
         },
+
+        addListenerOnPolygon: (polygon) => {
+          google.maps.event.addListener(polygon, 'click', function (event) {
+            console.log(polygon.getPath().clear());
+          });
+        }
       })
     } // end of Did M
   }), // end of lifeclycle
@@ -239,6 +275,11 @@ const MapWithADrawingManager = compose(
       }
     }}
   >
+    <Polygon
+
+
+
+    />
     <MapControl position={google.maps.ControlPosition.BOTTOM_CENTER}>
       <div>
         <button className='btn btn-info' onClick={props.onOverlaySave}>
@@ -263,28 +304,40 @@ const MapWithADrawingManager = compose(
 
 
     {props.stateRedraw.map(value => { //redraw all overlay
+
+      var overlayType = value['overlayData']['overlayType']
+      var overlayCoords = value['overlayData']['overlayCoords']
+      var overlayId = value['overlayId']
+
       //redraw polygon
-      if (value['shapeData']['overlayType'] === 'polygon') {
+      if (overlayType === 'polygon') {
+
         return (
           <Polygon
-            path={value['shapeData']['overlayCoords']}
-            key={value['shapeId']}
-          />)
+
+            paths={overlayCoords}
+            key={overlayId}
+
+          />
+        )
       }
+
       //redraw polyline
-      if (value['shapeData']['overlayType'] === 'polyline') {
+      if (overlayType === 'polyline') {
         return (
           <Polyline
-            path={value['shapeData']['overlayCoords']}
-            key={value['shapeId']}
+
+            path={overlayCoords}
+            key={overlayId}
           />)
       }
       //redraw marker
-      if (value['shapeData']['overlayType'] === 'marker') {
+      if (overlayType === 'marker') {
         return (
           <Marker
-            position={value['shapeData']['overlayCoords']['0']}
-            key={value['shapeId']}
+
+            position={overlayCoords['0']} //marker need just an array of latlng
+            key={overlayId}
           />)
 
       }
