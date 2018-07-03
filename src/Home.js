@@ -361,8 +361,8 @@ const MapWithADrawingManager = compose(
             defaultOptions={overlayOptions}
             paths={overlayCoords}
             key={overlayId}
-            onClick={() => console.log("ieie")}
             zIndex={overlayId}
+            onClick={() => console.log("Polygon Coordination are : ", overlayCoords)}
           />
         )
       }
@@ -374,7 +374,7 @@ const MapWithADrawingManager = compose(
             defaultOptions={overlayOptions}
             path={overlayCoords}
             key={overlayId}
-
+            onClick={() => console.log("Polyline Coordination are : ", overlayCoords)}
           />)
       }
       //redraw marker
