@@ -4,7 +4,7 @@
 // let จบลูปหาย - var ตรงกันข้าม
 import React from 'react'
 import { compose, withProps, lifecycle } from 'recompose'
-import { withScriptjs, withGoogleMap, GoogleMap, Marker, Polygon, Polyline } from 'react-google-maps'
+import { withScriptjs, withGoogleMap, GoogleMap, Marker, Polygon, Polyline, InfoWindow } from 'react-google-maps'
 import { db } from './config/Fire'
 import MapControl from './components/MapControl'
 import Dock from './components/Dock'
@@ -59,6 +59,13 @@ const MapWithADrawingManager = compose(
         markerOptions: {
 
         }, //same as above
+
+        polygonOnClick: (polygon) => {
+          polygon = new window.google.maps.Polygon()
+          var PolyCoords = [];
+          PolyCoords = polygon.getPath()
+          console.log("Click on polygon", PolyCoords)
+        },
 
         onOverlaySave: () => {
 
@@ -290,6 +297,17 @@ const MapWithADrawingManager = compose(
       })
     } // end of Did M
   }), // end of lifeclycle
+  withStateHandlers(() => ({
+    isOpen: false,
+  }), {
+      onToggleOpen: ({ isOpen }) => () => ({
+        isOpen: !isOpen,
+      }),
+      showInfo: ({ showInfo, isOpen }) => (a) => ({
+        isOpen: !isOpen,
+        showInfoIndex: a
+      }),
+    }),
   withScriptjs, // end of withScriptjs
   withGoogleMap // end of withGoogleMap
 )(props => (
@@ -315,8 +333,7 @@ const MapWithADrawingManager = compose(
         <button className='btn btn-info' onClick={props.getGeoLocation}>
           Find yourself!
         </button>
-        <button className='btn btn-danger'
-        >
+        <button className='btn btn-danger' disabled={true}>
           My name is {props.planName}
         </button>
         <Modal />
@@ -357,6 +374,7 @@ const MapWithADrawingManager = compose(
             defaultOptions={overlayOptions}
             path={overlayCoords}
             key={overlayId}
+
           />)
       }
       //redraw marker
@@ -365,73 +383,82 @@ const MapWithADrawingManager = compose(
           <Marker
             position={overlayCoords['0']} //marker need just an array of latlng
             key={overlayId}
-          />
-        )
-      }
+            options={{ icon: 'https://i.imgur.com/9G5JOp8.png' }}
+            onClick={() => { props.showInfo(overlayId) }}
+          >
+            {(props.showInfoIndex === overlayId) && <InfoWindow onCloseClick={props.onToggleOpen}>
+              <div>
+                position is : {overlayCoords['0'].lat} ,  {overlayCoords['0'].lng}
+              </div>
+            </InfoWindow>}
 
-    })
-    }
-
+            <Marker />
+            )
+          }
+    
+        })
+        }
+    
     <DrawingManager
-      onOverlayComplete={overlay => {
-        props.onOverlayAdd(overlay)
-      }}
+              onOverlayComplete={overlay => {
+                props.onOverlayAdd(overlay)
+              }}
 
-      defaultOptions={{
-        drawingControl: true,
-        drawingControlOptions: {
-          style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
-          position: google.maps.ControlPosition.TOP_CENTER,
-          drawingModes: [
-            google.maps.drawing.OverlayType.POLYGON,
-            google.maps.drawing.OverlayType.POLYLINE,
-            google.maps.drawing.OverlayType.MARKER,
-          ]
-        },
-        polygonOptions: props.polygonOptions,
-        polylineOptions: props.polylineOptions,
-        markerOptions: {},
-      }}
-    />
+              defaultOptions={{
+                drawingControl: true,
+                drawingControlOptions: {
+                  style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+                  position: google.maps.ControlPosition.TOP_CENTER,
+                  drawingModes: [
+                    google.maps.drawing.OverlayType.POLYGON,
+                    google.maps.drawing.OverlayType.POLYLINE,
+                    google.maps.drawing.OverlayType.MARKER,
+                  ]
+                },
+                polygonOptions: props.polygonOptions,
+                polylineOptions: props.polylineOptions,
+                markerOptions: {},
+              }}
+            />
 
-    <SearchBox
-      ref={props.onSearchBoxMounted}
-      controlPosition={google.maps.ControlPosition.TOP_LEFT}
-      onPlacesChanged={props.onPlacesChanged}
-    >
-      <input
-        type='text'
-        placeholder='ค้นหาสถานที่...'
-        style={{
-          boxSizing: `border-box`,
-          border: `1px solid transparent`,
-          width: `240px`,
-          height: `32px`,
-          marginTop: `10px`,
-          padding: `0 12px`,
-          borderRadius: `3px`,
-          boxShadow: `0 2px 6px rgba(0, 0, 0, 0.3)`,
-          fontSize: `14px`,
-          outline: `none`,
-          textOverflow: `ellipses`
-        }}
-      />
-    </SearchBox>
-    {props.markers.map((marker, index) => (
-      <Marker key={index} position={marker.position}
-        animation={google.maps.Animation.BOUNCE}
-      />
-    ))}
+            <SearchBox
+              ref={props.onSearchBoxMounted}
+              controlPosition={google.maps.ControlPosition.TOP_LEFT}
+              onPlacesChanged={props.onPlacesChanged}
+            >
+              <input
+                type='text'
+                placeholder='ค้นหาสถานที่...'
+                style={{
+                  boxSizing: `border-box`,
+                  border: `1px solid transparent`,
+                  width: `240px`,
+                  height: `32px`,
+                  marginTop: `10px`,
+                  padding: `0 12px`,
+                  borderRadius: `3px`,
+                  boxShadow: `0 2px 6px rgba(0, 0, 0, 0.3)`,
+                  fontSize: `14px`,
+                  outline: `none`,
+                  textOverflow: `ellipses`
+                }}
+              />
+            </SearchBox>
+            {props.markers.map((marker, index) => (
+              <Marker key={index} position={marker.position}
+                animation={google.maps.Animation.BOUNCE}
+              />
+            ))}
 
   </GoogleMap>
-))
+        ))
 
 export default class App extends React.PureComponent {
-  render() {
+      render() {
     return (
       <div>
-        <MapWithADrawingManager />
-      </div>
+      <MapWithADrawingManager />
+    </div>
     )
   }
 }
