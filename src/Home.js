@@ -392,7 +392,7 @@ const MapWithADrawingManager = compose(
               </div>
             </InfoWindow>}
 
-            <Marker />
+            </Marker >
             )
           }
     
