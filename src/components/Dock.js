@@ -17,7 +17,7 @@ export default class DockMap extends Component {
   }
 
   componentDidMount() {
-    // get all plan list from frirestore
+    // get all plan list from frirestore filter by user ID
     let arr = []
     db.collection('plan').get().then(function (querySnapshot) {
       querySnapshot.forEach(function (doc) {

@@ -1,7 +1,7 @@
 import React from "react";
 import Popup from "reactjs-popup";
-import { Form, Text } from 'react-form';
-import firebase, { db } from "../config/Fire";
+import { Form } from 'react-form';
+import { db } from "../config/Fire";
 
 export default class Modal extends React.Component {
     constructor(props) {

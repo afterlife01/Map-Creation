@@ -10,16 +10,6 @@ import MapControl from './components/MapControl'
 import Dock from './components/Dock'
 import Modal from './components/Modal'
 
-var jpath =
-  [
-    { lat: 13.7739818, lng: 100.546488 },
-    { lat: 13.5544, lng: 134.2465 },
-    { lat: 13.7268122, lng: 100.5802612999 },
-    { lat: 35.5396, lng: 134.2609 },
-    { lat: 35.5460, lng: 134.2622 },
-  ]
-
-
 const _ = require('lodash')
 const {
   DrawingManager
@@ -51,7 +41,8 @@ const MapWithADrawingManager = compose(
 
     componentDidMount() {
       const refs = {}
-      let arrayOfShapes = []
+      var arrayOfShapes = []
+      let overlayIndex = 0
       this.setState({
         markers: [], //for mark search position
         overlayState: [], //store overlay data
@@ -61,7 +52,6 @@ const MapWithADrawingManager = compose(
         polygonOptions: {
           strokeColor: '#ff751a',
           fillColor: '#ffc266',
-          paths: jpath
         }, //option for overlay eg. strokeColor,fillColor, icon
         polylineOptions: {
           strokeColor: '#ff751a',
@@ -71,25 +61,20 @@ const MapWithADrawingManager = compose(
         }, //same as above
 
         onOverlaySave: () => {
-          this.setState(
-            {
-              overlayState: arrayOfShapes
-            }, () => { console.log('click!', this.state.overlayState) })
 
           var shapeId = this.state.planId
           console.log("id", shapeId)
           for (var key in arrayOfShapes) {
             var value = arrayOfShapes[key]
-            console.log("value", value['OverlayType'])
+            console.log("value", value['overlayType'])
             // add coords array to cloud firestore
             db.collection('shapes').add({
               // add data here
-
-              overlayCoords: value['OverlayCoords'],
-              overlayType: value['OverlayType'],
+              overlayCoords: value['overlayCoords'],
+              overlayType: value['overlayType'],
               planId: value['planId'],
-              overlayOptions: value['overlayOptions']
-
+              overlayOptions: value['overlayOptions'],
+              zIndex: value['zIndex']
             }).catch(function (error) {
               console.error('Error writing document: ', error)
             });
@@ -133,19 +118,16 @@ const MapWithADrawingManager = compose(
           var overlayObject = overlay.overlay // get overlay object data
           var overlayType = overlay.type // get type of overlay
           var overlayCoords = []
+          var planId = this.state.planId
+          var zIndex = overlayIndex
+          overlayIndex += 1
+
+          //addListener to overlays
+          this.state.addListenerOnOverlay(overlay)
 
           if (overlayType === 'polygon') {
             // loop for store LatLng to coords array
-            console.log(overlayObject.getPath(), 'raw')
-
             this.state.onSquereMetersTrans(overlayObject)
-
-            google.maps.event.addListener(overlayObject, 'rightclick', function (event) {
-              console.log("in add", overlayObject)
-            })
-
-            //this.state.addListenerOnPolygon(overlayObject)
-
             // push data that can save to firestore to object
             overlayObject.getPath().forEach(function (value) {
               overlayCoords.push({
@@ -182,19 +164,16 @@ const MapWithADrawingManager = compose(
             overlayOptions = this.state.polylineOptions
           }
 
-          var overlayId = arrayOfShapes.length
-
           arrayOfShapes.push({
             overlayType,
             overlayCoords,
-            planId: this.state.planId,
+            planId,
             overlayOptions,
-            overlayId
+            zIndex
           })
           this.setState({
             overlayState: arrayOfShapes
           }, () => console.log('#overlay in this overlayState ', this.state.overlayState))
-
         },
 
         onMapMounted: ref => {
@@ -252,13 +231,41 @@ const MapWithADrawingManager = compose(
 
         },
 
-        addListenerOnPolygon: (polygon) => {
-          var self = this
-          google.maps.event.addListener(polygon, 'rightclick', function (event) {
-            console.log(polygon)
-            console.log(self.state.overlayState, 'from listener')
-          });
+        addListenerOnOverlay: (overlay) => {
+          var overlayObject = overlay.overlay // get overlay object data
+          var overlayType = overlay.type // get type of overlay
+          var index = overlayObject['zIndex'] //an index that identify overlay
+          var indexForDelete = arrayOfShapes.findIndex(arrayOfShapes => arrayOfShapes.zIndex === index) //find index for use to delete from array
+
+          if (overlayType === 'polygon') {
+            google.maps.event.addListener(overlayObject, 'rightclick', function (event) {
+              //ลบ polygon ออกจาก map โดยใช้ splice() ซึ่งจะเป็นการลบข้อมูลและจัดเรียงอาเรย์ให้ใหม่ โดยใช้ zindex ของตัว polygon เป็นตัวชี้
+              arrayOfShapes.splice(indexForDelete, 1)
+              overlayObject.getPath().clear()
+              console.log(arrayOfShapes)
+            });
+          }
+
+          if (overlayType === 'polyline') {
+            google.maps.event.addListener(overlayObject, 'rightclick', function (event) {
+              //ลบ polygon ออกจาก map โดยใช้ splice() ซึ่งจะเป็นการลบข้อมูลและจัดเรียงอาเรย์ให้ใหม่ โดยใช้ zindex ของตัว polygon เป็นตัวชี้
+              arrayOfShapes.splice(indexForDelete, 1)
+              overlayObject.getPath().clear()
+              console.log(arrayOfShapes)
+            });
+          }
+
+          if (overlayType === 'marker') {
+            google.maps.event.addListener(overlayObject, 'rightclick', function (event) {
+              //ลบ polygon ออกจาก map โดยใช้ splice() ซึ่งจะเป็นการลบข้อมูลและจัดเรียงอาเรย์ให้ใหม่ โดยใช้ zindex ของตัว polygon เป็นตัวชี้
+              arrayOfShapes.splice(indexForDelete, 1)
+              overlayObject.setMap(null)
+              console.log(arrayOfShapes, 'markerrr')
+            });
+          }
+
         },
+
         getGeoLocation: () => {
           navigator.geolocation.getCurrentPosition(position => {
             console.log(position.coords)
@@ -266,11 +273,20 @@ const MapWithADrawingManager = compose(
               center: {
                 lat: position.coords.latitude,
                 lng: position.coords.longitude,
-                zoom: 17
               }
             })
           })
         },
+        onOverlayDeleteFromFirestore: () => {
+          //delete data from firestore
+          var indexForDelete
+          db.collection('shapes').where('zIndex', '==', ).delete().then(function () {
+            console.log("Document successfully deleted!");
+          }).catch(function (error) {
+            console.error("Error removing document: ", error);
+          });
+        },
+
       })
     } // end of Did M
   }), // end of lifeclycle
@@ -299,7 +315,8 @@ const MapWithADrawingManager = compose(
         <button className='btn btn-info' onClick={props.getGeoLocation}>
           Find yourself!
         </button>
-        <button className='btn btn-danger' >
+        <button className='btn btn-danger'
+        >
           My name is {props.planName}
         </button>
         <Modal />
@@ -311,6 +328,7 @@ const MapWithADrawingManager = compose(
         onOverlayQuery={props.onOverlayQuery}
       />
     </MapControl>
+
     {props.stateRedraw.map(value => { //redraw all overlay
 
       var overlayType = value['overlayData']['overlayType']
@@ -323,11 +341,11 @@ const MapWithADrawingManager = compose(
 
         return (
           <Polygon
-
             defaultOptions={overlayOptions}
             paths={overlayCoords}
             key={overlayId}
-            onClick={() => console.log(overlayId)}
+            onClick={() => console.log("ieie")}
+            zIndex={overlayId}
           />
         )
       }
@@ -355,10 +373,10 @@ const MapWithADrawingManager = compose(
     }
 
     <DrawingManager
-
       onOverlayComplete={overlay => {
         props.onOverlayAdd(overlay)
       }}
+
       defaultOptions={{
         drawingControl: true,
         drawingControlOptions: {
@@ -372,11 +390,10 @@ const MapWithADrawingManager = compose(
         },
         polygonOptions: props.polygonOptions,
         polylineOptions: props.polylineOptions,
-        markerOptions: {
-          animation: google.maps.Animation.DROP,
-        },
+        markerOptions: {},
       }}
     />
+
     <SearchBox
       ref={props.onSearchBoxMounted}
       controlPosition={google.maps.ControlPosition.TOP_LEFT}
