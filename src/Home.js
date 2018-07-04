@@ -41,14 +41,13 @@ const MapWithADrawingManager = compose(
 
     componentDidMount() {
       const refs = {}
-      let arrayOfShapes = []
       let overlayIndex = 0
+      let oRef = []
       this.setState({
         markers: [], //for mark search position
         overlayState: [], //store overlay data
         planId: '', // plan Id for show on screen and use for save to firestore
         planName: '', //plan name for show on screen
-        stateRedraw: [], //store overlay data that get from firestore
         polygonOptions: {
           strokeColor: '#ff751a',
           fillColor: '#ffc266',
@@ -59,12 +58,12 @@ const MapWithADrawingManager = compose(
         markerOptions: {}, //same as above
         overlayRef: [],
         onOverlaySave: () => {
-
+          let arrayOfShapes = []
+          arrayOfShapes = this.state.overlayState
           var shapeId = this.state.planId
           console.log("id", shapeId)
           for (var key in arrayOfShapes) {
             var value = arrayOfShapes[key]
-            console.log("value", value['overlayType'])
             // add coords array to cloud firestore
             db.collection('shapes').add({
               // add data here
@@ -119,6 +118,8 @@ const MapWithADrawingManager = compose(
           var planId = this.state.planId
           var zIndex = overlayIndex
           overlayIndex += 1
+          var arrayOfShapes = []
+          arrayOfShapes = this.state.overlayState
 
           //addListener to overlays
           this.state.addListenerOnOverlay(overlay)
@@ -162,17 +163,16 @@ const MapWithADrawingManager = compose(
             overlayOptions = this.state.polylineOptions
           }
 
-          var temp = []
-          temp = this.state.overlayState
-          temp.push({
+          arrayOfShapes.push({
             overlayType,
             overlayCoords,
             planId,
             overlayOptions,
             zIndex
           })
+
           this.setState({
-            overlayState: temp
+            overlayState: arrayOfShapes
           }, () => console.log('#overlay in this overlayState ', this.state.overlayState))
         },
         onMapMounted: ref => {
@@ -184,10 +184,10 @@ const MapWithADrawingManager = compose(
         onOverlayMount: ref => {
           refs.overlay = ref
 
-          arrayOfShapes.push(ref)
+          oRef.push(ref)
           this.setState({
-            overlayRef: arrayOfShapes
-          }, () => console.log(this.state.overlayRef))
+            overlayRef: oRef
+          }, () => console.log(this.state.overlayRef, '555'))
 
         },
 
@@ -213,10 +213,11 @@ const MapWithADrawingManager = compose(
         },
 
         onOverlayQuery: (planData) => {
-          var self = this;
           var planName = planData['planName']['planName']
           var planId = planData['planId']
-          var arr = []
+
+          let arrayOfShapes = []
+
           this.setState({
             planId: planId,
             planName: planName,
@@ -225,20 +226,19 @@ const MapWithADrawingManager = compose(
 
           db.collection('shapes').where('planId', '==', planId).get().then(function (querySnapshot) {
             querySnapshot.forEach(function (doc) {
-              arr.push({
+              arrayOfShapes.push({
                 overlayData: doc.data(),
                 overlayId: doc.id
               })
             })
-            console.log("user for create overlay", arr, planId)
-            self.setState({
-              stateRedraw: arr
-            })
           })
-
+          this.setState({
+            overlayState: arrayOfShapes
+          }, () => console.log(this.state.overlayState, 'statettt'))
         },
 
         addListenerOnOverlay: (overlay) => {
+          var arrayOfShapes = this.state.overlayState
           var overlayObject = overlay.overlay // get overlay object data
           var overlayType = overlay.type // get type of overlay
           var index = overlayObject['zIndex'] //an index that identify overlay
@@ -301,7 +301,8 @@ const MapWithADrawingManager = compose(
         onOverlayDeleteFromFirestore: (overlay) => {
           //delete data from firestore
 
-          console.log(overlay, 'from delete')
+          this.state.overlayState.splice(overlay, 1)
+
           // db.collection("shapes").doc(overlayId).delete().then(function () {
           //   console.log("Document successfully deleted!");
           // }).catch(function (error) {
@@ -358,13 +359,12 @@ const MapWithADrawingManager = compose(
         onOverlayQuery={props.onOverlayQuery}
       />
     </MapControl>
-    {props.stateRedraw.map(obj => { //redraw all overlay
+    {props.overlayState.map(obj => { //redraw all overlay
 
-      var overlayType = obj['overlayData']['overlayType']
-      var overlayCoords = obj['overlayData']['overlayCoords']
-      var overlayId = obj['overlayId']
-      var overlayOptions = obj['overlayData']['overlayOptions']
-
+      let overlayType = obj['overlayData']['overlayType']
+      let overlayCoords = obj['overlayData']['overlayCoords']
+      let overlayId = obj['overlayId']
+      let overlayOptions = obj['overlayData']['overlayOptions']
       //redraw polygon
       if (overlayType === 'polygon') {
         return (
@@ -374,14 +374,11 @@ const MapWithADrawingManager = compose(
             key={overlayId}
             zIndex={overlayId}
             ref={props.onOverlayMount}
-            editable={true}
             onRightClick={() => {
-              var selected = props.overlayRef.find(ref => (ref['_reactInternalFiber']['key'] === overlayId))
-              console.log(selected)
-              props.onOverlayDeleteFromFirestore(selected)
-
+              let index = props.overlayRef.findIndex(ref => (ref['_reactInternalFiber']['key'] === overlayId))
+              props.onOverlayDeleteFromFirestore(index)
+              props.overlayRef[index].getPath().clear()
             }}
-
           />
         )
       }
@@ -396,7 +393,7 @@ const MapWithADrawingManager = compose(
             zIndex={overlayId}
             ref={props.onOverlayMount}
             onClick={() => {
-              var ref = props.overlayRef
+              let ref = props.overlayRef
               ref.find(function (elem) {
                 console.log(elem['_reactInternalFiber']['key'] = overlayId)
               })
