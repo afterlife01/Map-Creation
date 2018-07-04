@@ -162,7 +162,9 @@ const MapWithADrawingManager = compose(
             overlayOptions = this.state.polylineOptions
           }
 
-          arrayOfShapes.push({
+          var temp = []
+          temp = this.state.overlayState
+          temp.push({
             overlayType,
             overlayCoords,
             planId,
@@ -170,7 +172,7 @@ const MapWithADrawingManager = compose(
             zIndex
           })
           this.setState({
-            overlayState: arrayOfShapes
+            overlayState: temp
           }, () => console.log('#overlay in this overlayState ', this.state.overlayState))
         },
         onMapMounted: ref => {
@@ -185,7 +187,7 @@ const MapWithADrawingManager = compose(
           arrayOfShapes.push(ref)
           this.setState({
             overlayRef: arrayOfShapes
-          })
+          }, () => console.log(this.state.overlayRef))
 
         },
 
@@ -296,14 +298,15 @@ const MapWithADrawingManager = compose(
             })
           })
         },
-        onOverlayDeleteFromFirestore: () => {
+        onOverlayDeleteFromFirestore: (overlay) => {
           //delete data from firestore
-          var indexForDelete
-          db.collection('shapes').where('zIndex', '==', ).delete().then(function () {
-            console.log("Document successfully deleted!");
-          }).catch(function (error) {
-            console.error("Error removing document: ", error);
-          });
+
+          console.log(overlay, 'from delete')
+          // db.collection("shapes").doc(overlayId).delete().then(function () {
+          //   console.log("Document successfully deleted!");
+          // }).catch(function (error) {
+          //   console.error("Error removing document: ", error);
+          // });
         },
       })
     } // end of Did M
@@ -375,6 +378,8 @@ const MapWithADrawingManager = compose(
             onRightClick={() => {
               var selected = props.overlayRef.find(ref => (ref['_reactInternalFiber']['key'] === overlayId))
               console.log(selected)
+              props.onOverlayDeleteFromFirestore(selected)
+
             }}
 
           />
@@ -425,7 +430,6 @@ const MapWithADrawingManager = compose(
     <DrawingManager
       onOverlayComplete={overlay => {
         props.onOverlayAdd(overlay)
-        console.log(overlay.overlay)
       }}
 
       defaultOptions={{
