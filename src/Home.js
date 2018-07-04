@@ -3,8 +3,8 @@
 
 // let จบลูปหาย - var ตรงกันข้าม
 import React from 'react'
-import { compose, withProps, lifecycle } from 'recompose'
-import { withScriptjs, withGoogleMap, GoogleMap, Marker, Polygon, Polyline } from 'react-google-maps'
+import { compose, withProps, lifecycle, withStateHandlers, withHandlers } from 'recompose'
+import { withScriptjs, withGoogleMap, GoogleMap, Marker, Polygon, Polyline, InfoWindow } from 'react-google-maps'
 import { db } from './config/Fire'
 import MapControl from './components/MapControl'
 import Dock from './components/Dock'
@@ -20,7 +20,7 @@ const {
 
 const MapWithADrawingManager = compose(
   withProps({
-    googleMapURL: 'https://maps.googleapis.com/maps/api/js?key=AIzaSyAyesbQMyKVVbBgKVi2g6VX7mop2z96jBo&v=3.exp&libraries=geometry,drawing,places',
+    googleMapURL: 'https://maps.googleapis.com/maps/api/js?key=AIzaSyC4R6AN7SmujjPUIGKdyao2Kqitzr1kiRg&v=3.exp&libraries=geometry,drawing,places',
     loadingElement: <div style={{ height: `100%` }} />,
     containerElement:
       <div style={{
@@ -41,7 +41,7 @@ const MapWithADrawingManager = compose(
 
     componentDidMount() {
       const refs = {}
-      var arrayOfShapes = []
+      let arrayOfShapes = []
       let overlayIndex = 0
       this.setState({
         markers: [], //for mark search position
@@ -56,10 +56,8 @@ const MapWithADrawingManager = compose(
         polylineOptions: {
           strokeColor: '#ff751a',
         }, //same as above
-        markerOptions: {
-
-        }, //same as above
-
+        markerOptions: {}, //same as above
+        overlayRef: [],
         onOverlaySave: () => {
 
           var shapeId = this.state.planId
@@ -74,11 +72,11 @@ const MapWithADrawingManager = compose(
               overlayType: value['overlayType'],
               planId: value['planId'],
               overlayOptions: value['overlayOptions'],
-              zIndex: value['zIndex']
             }).catch(function (error) {
               console.error('Error writing document: ', error)
             });
           }
+
         },
 
         onSquereMetersTrans: polygon => {
@@ -175,13 +173,20 @@ const MapWithADrawingManager = compose(
             overlayState: arrayOfShapes
           }, () => console.log('#overlay in this overlayState ', this.state.overlayState))
         },
-
         onMapMounted: ref => {
           refs.map = ref
         },
-
         onSearchBoxMounted: ref => {
           refs.searchBox = ref
+        },
+        onOverlayMount: ref => {
+          refs.overlay = ref
+
+          arrayOfShapes.push(ref)
+          this.setState({
+            overlayRef: arrayOfShapes
+          })
+
         },
 
         onPlacesChanged: () => {
@@ -209,11 +214,11 @@ const MapWithADrawingManager = compose(
           var self = this;
           var planName = planData['planName']['planName']
           var planId = planData['planId']
-          let arr = []
-
+          var arr = []
           this.setState({
             planId: planId,
-            planName: planName
+            planName: planName,
+
           })
 
           db.collection('shapes').where('planId', '==', planId).get().then(function (querySnapshot) {
@@ -244,6 +249,11 @@ const MapWithADrawingManager = compose(
               overlayObject.getPath().clear()
               console.log(arrayOfShapes)
             });
+
+            google.maps.event.addListener(overlayObject, 'click', function (event) {
+              //ลบ polygon ออกจาก map โดยใช้ splice() ซึ่งจะเป็นการลบข้อมูลและจัดเรียงอาเรย์ให้ใหม่ โดยใช้ zindex ของตัว polygon เป็นตัวชี้
+              console.log(arrayOfShapes)
+            });
           }
 
           if (overlayType === 'polyline') {
@@ -266,6 +276,15 @@ const MapWithADrawingManager = compose(
 
         },
 
+        addListenerOnReDrawOverlay: (overlay) => {
+          google.maps.event.addListener(overlay, 'click', function (event) {
+            // //ลบ polygon ออกจาก map โดยใช้ splice() ซึ่งจะเป็นการลบข้อมูลและจัดเรียงอาเรย์ให้ใหม่ โดยใช้ zindex ของตัว polygon เป็นตัวชี้
+            // arrayOfShapes.splice(indexForDelete, 1)
+            // overlayObject.getPath().clear()
+            console.log(overlay, 'from add')
+          });
+        },
+
         getGeoLocation: () => {
           navigator.geolocation.getCurrentPosition(position => {
             console.log(position.coords)
@@ -286,10 +305,20 @@ const MapWithADrawingManager = compose(
             console.error("Error removing document: ", error);
           });
         },
-
       })
     } // end of Did M
   }), // end of lifeclycle
+  withStateHandlers(() => ({
+    isOpen: false,
+  }), {
+      onToggleOpen: ({ isOpen }) => () => ({
+        isOpen: !isOpen,
+      }),
+      showInfo: ({ showInfo, isOpen }) => (a) => ({
+        isOpen: !isOpen,
+        showInfoIndex: a
+      }),
+    }),
   withScriptjs, // end of withScriptjs
   withGoogleMap // end of withGoogleMap
 )(props => (
@@ -297,7 +326,6 @@ const MapWithADrawingManager = compose(
     ref={props.onMapMounted}
     center={props.center}
     defaultZoom={17}
-
     defaultMapTypeId={'satellite'}
     defaultOptions={{
       fullscreenControl: false,
@@ -315,8 +343,7 @@ const MapWithADrawingManager = compose(
         <button className='btn btn-info' onClick={props.getGeoLocation}>
           Find yourself!
         </button>
-        <button className='btn btn-danger'
-        >
+        <button className='btn btn-danger' disabled={true}>
           My name is {props.planName}
         </button>
         <Modal />
@@ -328,24 +355,28 @@ const MapWithADrawingManager = compose(
         onOverlayQuery={props.onOverlayQuery}
       />
     </MapControl>
+    {props.stateRedraw.map(obj => { //redraw all overlay
 
-    {props.stateRedraw.map(value => { //redraw all overlay
-
-      var overlayType = value['overlayData']['overlayType']
-      var overlayCoords = value['overlayData']['overlayCoords']
-      var overlayId = value['overlayId']
-      var overlayOptions = value['overlayData']['overlayOptions']
+      var overlayType = obj['overlayData']['overlayType']
+      var overlayCoords = obj['overlayData']['overlayCoords']
+      var overlayId = obj['overlayId']
+      var overlayOptions = obj['overlayData']['overlayOptions']
 
       //redraw polygon
       if (overlayType === 'polygon') {
-
         return (
           <Polygon
             defaultOptions={overlayOptions}
             paths={overlayCoords}
             key={overlayId}
-            onClick={() => console.log("ieie")}
             zIndex={overlayId}
+            ref={props.onOverlayMount}
+            editable={true}
+            onRightClick={() => {
+              var selected = props.overlayRef.find(ref => (ref['_reactInternalFiber']['key'] === overlayId))
+              console.log(selected)
+            }}
+
           />
         )
       }
@@ -357,7 +388,16 @@ const MapWithADrawingManager = compose(
             defaultOptions={overlayOptions}
             path={overlayCoords}
             key={overlayId}
-          />)
+            zIndex={overlayId}
+            ref={props.onOverlayMount}
+            onClick={() => {
+              var ref = props.overlayRef
+              ref.find(function (elem) {
+                console.log(elem['_reactInternalFiber']['key'] = overlayId)
+              })
+            }}
+          />
+        )
       }
       //redraw marker
       if (overlayType === 'marker') {
@@ -365,16 +405,27 @@ const MapWithADrawingManager = compose(
           <Marker
             position={overlayCoords['0']} //marker need just an array of latlng
             key={overlayId}
-          />
+            options={{ icon: 'https://i.imgur.com/9G5JOp8.png' }}
+            onClick={() => { props.showInfo(overlayId) }}
+            ref={props.onOverlayMount}
+          >
+            {(props.showInfoIndex === overlayId) && <InfoWindow onCloseClick={props.onToggleOpen}>
+              <div>
+                position is : {overlayCoords['0'].lat} ,  {overlayCoords['0'].lng}
+              </div>
+            </InfoWindow>}
+
+          </Marker>
         )
       }
-
     })
     }
+
 
     <DrawingManager
       onOverlayComplete={overlay => {
         props.onOverlayAdd(overlay)
+        console.log(overlay.overlay)
       }}
 
       defaultOptions={{
@@ -417,11 +468,13 @@ const MapWithADrawingManager = compose(
         }}
       />
     </SearchBox>
-    {props.markers.map((marker, index) => (
-      <Marker key={index} position={marker.position}
-        animation={google.maps.Animation.BOUNCE}
-      />
-    ))}
+    {
+      props.markers.map((marker, index) => (
+        <Marker key={index} position={marker.position}
+          animation={google.maps.Animation.BOUNCE}
+        />
+      ))
+    }
 
   </GoogleMap>
 ))
