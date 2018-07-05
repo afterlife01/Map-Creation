@@ -12,24 +12,26 @@ export default class DockMap extends Component {
 
     this.state = {
       isVisible: false,
-      planData: [],
+      planData: []
     }
   }
 
   componentDidMount() {
     // get all plan list from frirestore filter by user ID
     let arr = []
+    let self = this
     db.collection('plan').get().then(function (querySnapshot) {
       querySnapshot.forEach(function (doc) {
         arr.push({
-          planName: doc.data(),
+          planName: doc.data().planName,
           planId: doc.id
         })
       })
+      self.setState({
+        planData: arr
+      })
     })
-    this.setState({
-      planData: arr
-    })
+
   }
 
   logout() {
@@ -73,17 +75,18 @@ export default class DockMap extends Component {
           >
             X
           </button>
-          <ul>
 
-            {/* add all list to dock */}
+
+          <ul>
             {this.state.planData.map(value => {
+
               return (
                 <li
                   className='li'
                   key={value['planId']}
                   onClick={() => this.onListClick(value)}
                 >
-                  {value['planName']['planName']}
+                  {value['planName']}
                 </li>
               )
             })}
