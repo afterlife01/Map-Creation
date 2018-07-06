@@ -31,7 +31,7 @@ const MapWithADrawingManager = compose(
         alignItems: 'center'
       }} />,
     mapElement: <div style={{ height: `100%` }} />,
-    center: { lat: 13.7739718, lng: 100.4852024 }
+
   }),
   lifecycle({
     componentDidMount() {
@@ -51,35 +51,37 @@ const MapWithADrawingManager = compose(
           strokeWeight: '7'
         }, //same as above
         markerOptions: {
-
         }, //same as above
         overlayRef: [],
         selectedOverlay: [],
         overlayRedraw: [],
         visible: true,
-
+        rfill: '#123abc',
+        isMarkerShow: false,
+        zoom: 15,
         onOverlaySave: () => {
 
           let arrayOfShapes = []
           arrayOfShapes = this.state.overlayState
-          for (var key in arrayOfShapes) {
+          if (arrayOfShapes.length > 0) {
 
-            var value = arrayOfShapes[key]
-            console.log(value)
-            // add coords array to cloud firestore
-            db.collection('shapes').add({
-              // add data here
-              overlayCoords: value['overlayCoords'],
-              overlayType: value['overlayType'],
-              planId: value['planId'],
-              overlayOptions: value['overlayOptions'],
-            }).then(function () {
-              console.log(value, 'is added')
-            }).catch(function (error) {
-              console.error('Error writing document: ', error)
-            });
+            for (var key in arrayOfShapes) {
+
+              var value = arrayOfShapes[key]
+              // add coords array to cloud firestore
+              db.collection('shapes').add({
+                // add data here
+                overlayCoords: value['overlayCoords'],
+                overlayType: value['overlayType'],
+                planId: value['planId'],
+                overlayOptions: value['overlayOptions'],
+              }).then(
+                console.log("notice me pempai!")
+              )
+            }
+          } else {
+            alert('Nothing to save!')
           }
-
         },
         onSquereMetersTrans: polygon => {
 
@@ -184,6 +186,8 @@ const MapWithADrawingManager = compose(
           this.setState({
             mapRef: t
           })
+
+          this.state.getGeoLocation()
         },
         onSearchBoxMounted: ref => {
           refs.searchBox = ref
@@ -217,7 +221,7 @@ const MapWithADrawingManager = compose(
         },
         onPlacesChanged: () => {
           const places = refs.searchBox.getPlaces()
-          console.log(places, 'places')
+          console.log(_, 'places')
           const bounds = new google.maps.LatLngBounds()
           places.forEach(place => {
             if (place.geometry.viewport) {
@@ -233,7 +237,8 @@ const MapWithADrawingManager = compose(
 
           this.setState({
             center: nextCenter,
-            markers: nextMarkers
+            markers: nextMarkers,
+            isMarkerShow: true
           }, () => console.log(nextCenter, 'next cen'),
             console.log(nextMarkers[0]['position'], 'nextmark'))
         },
@@ -266,13 +271,24 @@ const MapWithADrawingManager = compose(
         readRef: () => {
           console.log(this.state.mapRef)
           console.log(this.state.drawingManagerRef)
+
         },
         addListenerOnOverlay: (overlay) => {
           var self = this
           var overlayObject = overlay.overlay // get overlay object data
+
           google.maps.event.addListener(overlayObject, 'click', function (event) {
             self.state.setSelectOverlay(overlayObject, 'tool')
           })
+
+          if (overlay.type === 'polygon') {
+
+            google.maps.event.addListener(overlayObject, 'rightclick', function (event) {
+              overlayObject.setOptions({
+                fillColor: '#f25511'
+              })
+            })
+          }
         },
         getGeoLocation: () => {
           navigator.geolocation.getCurrentPosition(position => {
@@ -282,24 +298,25 @@ const MapWithADrawingManager = compose(
                 lat: position.coords.latitude,
                 lng: position.coords.longitude,
               },
+              isMarkerShow: true
+            }, () => {
+              if (this.state.zoom < 18) {
+                this.setState({
+                  zoom: 18
+                })
+              }
             })
           })
         },
-        onOverlayDeleteFromFirestore: (overlay, index) => {
-          //delete data from firestore and from overlayState
-
-          let overlayId = overlay['_reactInternalFiber']['key']
-
-          db.collection("shapes").doc(overlayId).delete().then(function () {
-            console.log("Document successfully deleted!");
-          }).catch(function (error) {
-            console.error("Error removing document: ", error);
-          });
-
-          this.state.overlayState.splice(index, 1)
-          overlay.getPath().clear()
-          console.log(this.state.overlayState, 'o state')
-
+        delayMarker: () => {
+          setTimeout(() => {
+            this.setState({
+              isMarkerShow: false
+            })
+          }, 1000);
+        },
+        onZoomChanged: () => {
+          this.setState({ zoom: this.state.mapRef.getZoom() })
         },
         onDeleteButton: () => {
           var selectedOverlay = this.state.selectedOverlay
@@ -320,6 +337,12 @@ const MapWithADrawingManager = compose(
             if (drawMode === 'redraw') {
               let ref = this.state.overlayRef
               let index = ref.findIndex(ref => (ref['_reactInternalFiber']['key'] === selectedOverlay['_reactInternalFiber']['key']))
+              var overlayId = selectedOverlay['_reactInternalFiber']['key']
+              db.collection("shapes").doc(overlayId).delete().then(function () {
+                console.log("Document successfully deleted!");
+              }).catch(function (error) {
+                console.error("Error removing document: ", error);
+              });
 
               if (selectedOverlay.props.type === 'polygon') {
                 ref.splice(index, 1)
@@ -341,6 +364,9 @@ const MapWithADrawingManager = compose(
           }
           this.state.resetSelectOverlay()
         },
+        onFillCorlorChange: () => {
+          this.setState({ rfill: '#ffaa13' })
+        }
       })
     } // end of Did M
   }), // end of lifeclycle
@@ -359,10 +385,12 @@ const MapWithADrawingManager = compose(
   withGoogleMap // end of withGoogleMap
 )(props => (
   <GoogleMap
+
     ref={props.onMapMounted}
     onClick={props.resetSelectOverlay}
     center={props.center}
-    defaultZoom={17}
+    zoom={props.zoom}
+    onZoomChanged={props.onZoomChanged}
     defaultMapTypeId={'satellite'}
     defaultOptions={{
       fullscreenControl: false,
@@ -370,7 +398,13 @@ const MapWithADrawingManager = compose(
         style: google.maps.MapTypeControlStyle.DROPDOWN_MENU
       }
     }}>
-
+    {
+      props.isMarkerShow && <Marker
+        position={props.center}
+        animation={google.maps.Animation.BOUNCE}
+        onMouseOver={props.delayMarker}
+      />
+    }
     <MapControl position={google.maps.ControlPosition.BOTTOM_CENTER}>
       <div>
         <button className='btn btn-info' onClick={props.onOverlaySave}>
@@ -402,6 +436,7 @@ const MapWithADrawingManager = compose(
     </MapControl>
 
     {props.overlayRedraw.map(obj => { //redraw all overlay
+      let t = props.rfill
 
       let overlayType = obj['overlayData']['overlayType']
       let overlayCoords = obj['overlayData']['overlayCoords']
@@ -412,7 +447,7 @@ const MapWithADrawingManager = compose(
         return (
           <Polygon
             options={{
-              fillColor: '#ff22aa'
+              fillColor: t
             }}
             paths={overlayCoords}
             editable={true}
@@ -427,6 +462,13 @@ const MapWithADrawingManager = compose(
               let polygon = ref[index]
               props.setSelectOverlay(polygon, 'redraw')
               //props.onOverlayDeleteFromFirestore(polygon, index)
+            }}
+            onRightClick={() => {
+              //props.onFillCorlorChange()
+              let ref = props.overlayRef
+              let index = ref.findIndex(ref => (ref['_reactInternalFiber']['key'] === overlayId))
+              let polygon = ref[index]
+              
             }}
           />
         )
@@ -529,7 +571,9 @@ const MapWithADrawingManager = compose(
     </SearchBox>
     {
       props.markers.map((marker, index) => (
-        <Marker key={index} position={marker.position}
+        props.isMarkerShow && <Marker
+          onMouseOver={props.delayMarker}
+          key={index} position={marker.position}
           animation={google.maps.Animation.BOUNCE}
         />
       ))
@@ -537,13 +581,4 @@ const MapWithADrawingManager = compose(
 
   </GoogleMap>
 ))
-
-export default class App extends React.PureComponent {
-  render() {
-    return (
-      <div>
-        <MapWithADrawingManager />
-      </div>
-    )
-  }
-}
+export default MapWithADrawingManager

@@ -65,8 +65,6 @@ export default class DockMap extends Component {
         <Dock
           position='right'
           isVisible={this.state.isVisible}
-          fluid
-          dimMode='opaque'
         >
 
           <button
