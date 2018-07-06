@@ -22,14 +22,14 @@ export default class DockMap extends Component {
     db.collection('plan').get().then(function (querySnapshot) {
       querySnapshot.forEach(function (doc) {
         arr.push({
-          planName: doc.data(),
-          planId: doc.id
+          planName: doc.data() + doc.id,
         })
       })
     })
-    this.setState({
-      planData: arr
-    })
+    // this.setState({
+    //   planData: arr
+    // })
+    console.log(arr,'adsf')
   }
 
   logout() {
@@ -46,6 +46,7 @@ export default class DockMap extends Component {
   onListClick(planData) {
     // pass props planIdForMap to map and then close dock
 
+ 
     this.props.onOverlayQuery(planData)
 
     this.setState({
@@ -63,8 +64,6 @@ export default class DockMap extends Component {
         <Dock
           position='right'
           isVisible={this.state.isVisible}
-          fluid
-          dimMode='opaque'
         >
 
           <button
