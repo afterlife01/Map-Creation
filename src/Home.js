@@ -177,9 +177,9 @@ const MapWithADrawingManager = compose(
             zIndex,
           })
 
-          // this.setState({
-          //   overlayState: arrayOfShapes
-          // }, () => console.log('#overlay in this overlayState ', this.state.overlayState))
+          this.setState({
+            overlayState: arrayOfShapes
+          }, () => console.log('#overlay in this overlayState ', this.state.overlayState))
         },
         onMapMounted: ref => {
           refs.map = ref
@@ -264,6 +264,7 @@ const MapWithADrawingManager = compose(
                 overlayRedraw: arrayOfShapes
               }, () => {
                 console.log(self.state.overlayRedraw, 'overlay state for redraw')
+                self.state.onFitBounds(arrayOfShapes)
               })
             })
           })
@@ -365,7 +366,18 @@ const MapWithADrawingManager = compose(
         },
         onFillCorlorChange: () => {
           this.setState({ rfill: '#ffaa13' })
-        }
+        },
+        onFitBounds: (arrayOfShapes) => {
+          const bounds = new window.google.maps.LatLngBounds();
+
+          arrayOfShapes.forEach(value => {
+            value.overlayData.overlayCoords.forEach(value2 => {
+              bounds.extend(new window.google.maps.LatLng(value2))
+            })
+          })
+          this.state.mapRef.fitBounds(bounds)
+        },
+
       })
     } // end of Did M
   }), // end of lifeclycle
@@ -449,7 +461,7 @@ const MapWithADrawingManager = compose(
               fillColor: t
             }}
             paths={overlayCoords}
-            editable={true}
+
             key={overlayId}
             zIndex={overlayId}
             ref={props.onOverlayMount}
