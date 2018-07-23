@@ -48,7 +48,7 @@ export default class Modal extends React.Component {
                 <Form>
                     <div>
                         <input value={this.state.inputValue} onChange={evt => this.updateInputValue(evt)} />
-                        <button type="submit" className="btn btn-primary" onClick={this.onSaveToFireStore}>Submit</button>
+                        <button type="submit" className="btn btn-primary" style={{ marginLeft: "25px" }} onClick={this.onSaveToFireStore}>Submit</button>
                     </div>
                 </Form>
 

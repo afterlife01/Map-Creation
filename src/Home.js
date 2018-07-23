@@ -527,7 +527,9 @@ const MapWithADrawingManager = compose(
           </Marker>
         )
       }
-    })
+      return 0
+    } 
+  )
     }
     <DrawingManager
       ref={props.onDrawingManagerMount}
